@@ -1,0 +1,17 @@
+package {{ base_package }}.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.client.WebClient;
+
+/**
+ * Configuracion de WebClient para peticiones HTTP salientes.
+ */
+@Configuration
+public class WebClientConfiguration {
+
+    @Bean
+    public WebClient.Builder webClientBuilder() {
+        return WebClient.builder();
+    }
+}

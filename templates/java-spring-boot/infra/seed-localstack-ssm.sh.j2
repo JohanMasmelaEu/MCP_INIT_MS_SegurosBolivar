@@ -1,0 +1,24 @@
+#!/bin/sh
+set -e
+
+ENDPOINT="http://localstack:4566"
+export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1
+
+HOST="host.docker.internal"
+DB="{{ db.db_name }}"
+U="{{ db.db_user }}"
+P="{{ db.db_password }}"
+PT="{{ db.db_port }}"
+
+put() {
+  aws ssm put-parameter --endpoint-url "$ENDPOINT" --region us-east-1 \
+    --name "$1" --value "$2" --type String --overwrite 2>/dev/null || true
+  echo "  - $1"
+}
+
+echo "Sembrando parametros SSM en LocalStack..."
+put "{{ ssm_app_prefix }}/dev/{{ context_path_clean }}-dev-master/endpoint" "$HOST:$PT"
+put "{{ ssm_app_prefix }}/dev/{{ context_path_clean }}-dev-master/database_name" "$DB"
+put "{{ ssm_app_prefix }}/dev/database/backend/username" "$U"
+put "{{ ssm_app_prefix }}/dev/database/backend/password" "$P"
+echo "Parameter Store en LocalStack listo (4 parametros BD)."

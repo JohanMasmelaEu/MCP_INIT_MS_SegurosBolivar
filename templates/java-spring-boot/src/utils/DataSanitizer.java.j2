@@ -1,0 +1,51 @@
+package {{ base_package }}.utils;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Sanitiza payloads de respuesta aplicando HTML entities encoding a strings.
+ * Mitiga XSS en campos de datos devueltos por el API.
+ */
+public final class DataSanitizer {
+
+    private DataSanitizer() {
+        // Utility class
+    }
+
+    /**
+     * Sanitiza recursivamente un objeto: strings se codifican con HTML entities,
+     * listas y mapas se recorren recursivamente.
+     *
+     * @param data objeto a sanitizar
+     * @return objeto sanitizado
+     */
+    @SuppressWarnings("unchecked")
+    public static Object sanitize(Object data) {
+        if (data == null) {
+            return null;
+        }
+        if (data instanceof String str) {
+            return HtmlEntityEncoder.encode(str);
+        }
+        if (data instanceof List<?> list) {
+            List<Object> sanitized = new ArrayList<>(list.size());
+            for (Object item : list) {
+                sanitized.add(sanitize(item));
+            }
+            return sanitized;
+        }
+        if (data instanceof Map<?, ?> map) {
+            Map<Object, Object> sanitized = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                sanitized.put(entry.getKey(), sanitize(entry.getValue()));
+            }
+            return sanitized;
+        }
+        // Objetos complejos (DTOs): se devuelven sin modificar.
+        // La sanitizacion profunda de DTOs se hace via Jackson serializers si se necesita.
+        return data;
+    }
+}

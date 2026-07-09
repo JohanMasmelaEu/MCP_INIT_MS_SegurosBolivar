@@ -1,0 +1,25 @@
+package {{ base_package }}.{{ module.module_name }}.dto;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * DTO de filtros para listado paginado de {{ module.entity_name }}.
+ * Todos los filtros son opcionales (query params).
+ */
+@Getter
+@Setter
+public class {{ module.entity_name }}FiltrosRequestDTO {
+{% if module.has_cod_field %}
+
+    private Long cod{{ module.entity_name }};
+{% endif %}
+{% for field in module.fields %}
+{% if field.field_type.value == "String" %}
+
+    private String {{ field.name }};
+{% endif %}
+{% endfor %}
+
+    private Boolean estado;
+}

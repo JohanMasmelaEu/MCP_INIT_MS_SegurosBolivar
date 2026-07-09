@@ -1,0 +1,77 @@
+package {{ base_package }}.config;
+
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+
+import javax.sql.DataSource;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Logger;
+
+/**
+ * Configuracion del DataSource PostgreSQL.
+ * En perfiles distintos a test, obtiene credenciales de AWS SSM Parameter Store.
+ */
+@Configuration
+public class DataBaseConfiguration {
+
+    private static final Logger LOG = Logger.getLogger(DataBaseConfiguration.class.getName());
+
+    @Value("${app.aws.db-params.endpoint}")
+    private String ssmEndpointPath;
+
+    @Value("${app.aws.db-params.database-name}")
+    private String ssmDbNamePath;
+
+    @Value("${app.aws.db-params.username}")
+    private String ssmUsernamePath;
+
+    @Value("${app.aws.db-params.password}")
+    private String ssmPasswordPath;
+
+    @Value("${app.database.host-override:}")
+    private String hostOverride;
+
+    @Value("${app.database.rds-ssl-root-cert:}")
+    private String rdsSslRootCert;
+
+    @Profile("!test")
+    @Bean
+    public DataSource dataSource(ParameterStoreClient parameterStoreClient) {
+        Map<String, String> params = parameterStoreClient.getParameters(
+                List.of(ssmEndpointPath, ssmDbNamePath, ssmUsernamePath, ssmPasswordPath)
+        );
+
+        String endpoint = params.get(ssmEndpointPath);
+        String dbName = params.get(ssmDbNamePath);
+        String username = params.get(ssmUsernamePath);
+        String password = params.get(ssmPasswordPath);
+
+        String host = (hostOverride != null && !hostOverride.isBlank()) ? hostOverride : endpoint;
+        String jdbcUrl = buildJdbcUrl(host, dbName);
+
+        LOG.info("Configurando DataSource: " + jdbcUrl.replaceAll("password=[^&]*", "password=***"));
+
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(jdbcUrl);
+        config.setUsername(username);
+        config.setPassword(password);
+        config.setMaximumPoolSize(10);
+        config.setMinimumIdle(2);
+        config.setConnectionTimeout(30000);
+
+        return new HikariDataSource(config);
+    }
+
+    private String buildJdbcUrl(String hostPort, String dbName) {
+        String base = "jdbc:postgresql://" + hostPort + "/" + dbName;
+        if (rdsSslRootCert != null && !rdsSslRootCert.isBlank()) {
+            return base + "?sslmode=verify-full&sslrootcert=" + rdsSslRootCert;
+        }
+        return base + "?sslmode=prefer";
+    }
+}

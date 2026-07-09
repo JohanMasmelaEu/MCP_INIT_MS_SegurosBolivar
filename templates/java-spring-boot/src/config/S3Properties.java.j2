@@ -1,0 +1,23 @@
+package {{ base_package }}.config;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * Properties de configuracion S3 (bucket, prefijos, tiempos de expiracion).
+ */
+@Configuration
+@ConfigurationProperties(prefix = "app.s3")
+@Getter
+@Setter
+public class S3Properties {
+
+    private String bucket;
+    private String keyPrefix;
+    private String region;
+    private int presignUploadExpirationMinutes = 15;
+    private int presignDownloadExpirationMinutes = 5;
+    private long maxFileSizeBytes = 10485760L;
+}

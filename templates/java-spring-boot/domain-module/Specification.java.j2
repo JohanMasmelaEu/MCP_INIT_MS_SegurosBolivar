@@ -1,0 +1,52 @@
+package {{ base_package }}.{{ module.module_name }}.repository;
+
+import {{ base_package }}.entity.{{ module.entity_name }};
+import {{ base_package }}.{{ module.module_name }}.dto.{{ module.entity_name }}FiltrosRequestDTO;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.jpa.domain.Specification;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Specification para filtros dinamicos en el listado de {{ module.entity_name }}.
+ */
+public final class {{ module.entity_name }}Specification {
+
+    private {{ module.entity_name }}Specification() {
+        // Utility class
+    }
+
+    /**
+     * Construye la Specification basada en los filtros proporcionados.
+     *
+     * @param filtros DTO con los filtros opcionales
+     * @return Specification compuesta
+     */
+    public static Specification<{{ module.entity_name }}> withFilters({{ module.entity_name }}FiltrosRequestDTO filtros) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (filtros.getEstado() != null) {
+                predicates.add(cb.equal(root.get("estado"), filtros.getEstado()));
+            }
+{% if module.has_cod_field %}
+
+            if (filtros.getCod{{ module.entity_name }}() != null) {
+                predicates.add(cb.equal(root.get("cod{{ module.entity_name }}"), filtros.getCod{{ module.entity_name }}()));
+            }
+{% endif %}
+{% for field in module.fields %}
+{% if field.field_type.value == "String" %}
+
+            if (filtros.get{{ field.name[0] | upper }}{{ field.name[1:] }}() != null && !filtros.get{{ field.name[0] | upper }}{{ field.name[1:] }}().isBlank()) {
+                predicates.add(cb.like(cb.lower(root.get("{{ field.name }}")),
+                        "%" + filtros.get{{ field.name[0] | upper }}{{ field.name[1:] }}().toLowerCase() + "%"));
+            }
+{% endif %}
+{% endfor %}
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+}

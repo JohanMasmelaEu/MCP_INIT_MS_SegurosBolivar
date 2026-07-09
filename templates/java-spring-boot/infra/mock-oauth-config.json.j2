@@ -1,0 +1,20 @@
+{
+  "interactiveLogin": true,
+  "httpServer": "NettyWrapper",
+  "tokenCallbacks": [
+    {
+      "issuerId": "default",
+      "tokenExpiry": 3600,
+      "requestMappings": [
+        {
+          "requestParam": "grant_type",
+          "match": "*",
+          "claims": {
+            "sub": "local-user",
+            "aud": ["{{ context_path_clean }}-local-client"]
+          }
+        }
+      ]
+    }
+  ]
+}

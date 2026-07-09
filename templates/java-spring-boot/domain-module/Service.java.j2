@@ -1,0 +1,24 @@
+package {{ base_package }}.{{ module.module_name }}.services;
+
+import {{ base_package }}.{{ module.module_name }}.dto.{{ module.entity_name }}ActualizarRequestDTO;
+import {{ base_package }}.{{ module.module_name }}.dto.{{ module.entity_name }}CrearRequestDTO;
+import {{ base_package }}.{{ module.module_name }}.dto.{{ module.entity_name }}FiltrosRequestDTO;
+import {{ base_package }}.{{ module.module_name }}.dto.{{ module.entity_name }}ResponseDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+/**
+ * Servicio CRUD para la entidad {{ module.entity_name }}.
+ */
+public interface {{ module.entity_name }}Service {
+
+    {{ module.entity_name }}ResponseDTO crear({{ module.entity_name }}CrearRequestDTO request);
+
+    {{ module.entity_name }}ResponseDTO obtenerPorId(Long id);
+
+    Page<{{ module.entity_name }}ResponseDTO> listar(Pageable pageable, {{ module.entity_name }}FiltrosRequestDTO filtros);
+
+    {{ module.entity_name }}ResponseDTO actualizar(Long id, {{ module.entity_name }}ActualizarRequestDTO request);
+
+    void eliminar(Long id);
+}

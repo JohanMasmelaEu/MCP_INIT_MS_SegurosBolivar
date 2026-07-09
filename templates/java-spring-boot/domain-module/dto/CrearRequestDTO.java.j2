@@ -1,0 +1,32 @@
+package {{ base_package }}.{{ module.module_name }}.dto;
+
+import jakarta.validation.constraints.*;
+import lombok.Getter;
+import lombok.Setter;
+{% for imp in field_imports %}
+import {{ imp }};
+{% endfor %}
+
+/**
+ * DTO de creacion para {{ module.entity_name }}.
+ * Valida campos obligatorios con Jakarta Validation.
+ */
+@Getter
+@Setter
+public class {{ module.entity_name }}CrearRequestDTO {
+{% for field in module.fields %}
+{% if not field.nullable %}
+
+    @NotNull(message = "{{ field.name }} es obligatorio")
+{% if field.field_type.value == "String" and field.length %}
+    @Size(max = {{ field.length }}, message = "{{ field.name }} no puede exceder {{ field.length }} caracteres")
+{% endif %}
+{% else %}
+
+{% if field.field_type.value == "String" and field.length %}
+    @Size(max = {{ field.length }}, message = "{{ field.name }} no puede exceder {{ field.length }} caracteres")
+{% endif %}
+{% endif %}
+    private {{ field.field_type.value }} {{ field.name }};
+{% endfor %}
+}

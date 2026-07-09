@@ -1,0 +1,59 @@
+package {{ base_package }}.commons;
+
+import {{ base_package }}.utils.DataSanitizer;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+/**
+ * Implementacion del DTO general de respuesta del API.
+ * Garantiza la estructura codigo, mensaje y data en todas las respuestas con cuerpo.
+ *
+ * @param <T> tipo del payload
+ */
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ApiResponseData<T> implements ApiResponseDTO<T> {
+
+    public static final String CODIGO_OK = ApiResponseMensajes.CODIGO_OK;
+    public static final String MENSAJE_OK = ApiResponseMensajes.MENSAJE_200;
+    public static final String MENSAJE_CREATED = ApiResponseMensajes.MENSAJE_201;
+    public static final String MENSAJE_ACCEPTED = ApiResponseMensajes.MENSAJE_202;
+
+    private String codigo;
+    private String mensaje;
+    private T data;
+
+    /**
+     * Respuesta 200 OK con sanitizacion XSS.
+     */
+    public static <T> ApiResponseData<T> of(T data) {
+        return new ApiResponseData<>(CODIGO_OK, MENSAJE_OK, sanitizePayload(data));
+    }
+
+    /**
+     * Respuesta 201 Created con sanitizacion XSS.
+     */
+    public static <T> ApiResponseData<T> ofCreated(T data) {
+        return new ApiResponseData<>(CODIGO_OK, MENSAJE_CREATED, sanitizePayload(data));
+    }
+
+    /**
+     * Respuesta 202 Accepted con sanitizacion XSS.
+     */
+    public static <T> ApiResponseData<T> ofAccepted(T data) {
+        return new ApiResponseData<>(CODIGO_OK, MENSAJE_ACCEPTED, sanitizePayload(data));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T sanitizePayload(T data) {
+        if (data == null) {
+            return null;
+        }
+        Object sanitized = DataSanitizer.sanitize(data);
+        return (T) sanitized;
+    }
+}

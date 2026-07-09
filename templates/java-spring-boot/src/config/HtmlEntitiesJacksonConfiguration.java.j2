@@ -1,0 +1,12 @@
+package {{ base_package }}.config;
+
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * Configuracion de Jackson para manejo de HTML entities en respuestas.
+ * Los campos data del API se codifican con HTML entities para mitigar XSS.
+ */
+@Configuration
+public class HtmlEntitiesJacksonConfiguration {
+    // Jackson ObjectMapper customization se aplica via DataSanitizer en ApiResponseData
+}

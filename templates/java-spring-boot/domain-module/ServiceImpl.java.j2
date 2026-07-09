@@ -1,0 +1,119 @@
+package {{ base_package }}.{{ module.module_name }}.services;
+
+import {{ base_package }}.commons.UsuarioAuditoriaProvider;
+import {{ base_package }}.entity.{{ module.entity_name }};
+import {{ base_package }}.errorhandling.BolivarBusinessException;
+import {{ base_package }}.errorhandling.TipoErrorEnum;
+import {{ base_package }}.{{ module.module_name }}.dto.{{ module.entity_name }}ActualizarRequestDTO;
+import {{ base_package }}.{{ module.module_name }}.dto.{{ module.entity_name }}CrearRequestDTO;
+import {{ base_package }}.{{ module.module_name }}.dto.{{ module.entity_name }}FiltrosRequestDTO;
+import {{ base_package }}.{{ module.module_name }}.dto.{{ module.entity_name }}ResponseDTO;
+import {{ base_package }}.{{ module.module_name }}.repository.{{ module.entity_name }}Repository;
+import {{ base_package }}.{{ module.module_name }}.repository.{{ module.entity_name }}Specification;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+
+/**
+ * Implementacion del servicio CRUD para {{ module.entity_name }}.
+ */
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class {{ module.entity_name }}ServiceImpl implements {{ module.entity_name }}Service {
+
+    private final {{ module.entity_name }}Repository repository;
+    private final UsuarioAuditoriaProvider auditoriaProvider;
+
+    @Override
+    public {{ module.entity_name }}ResponseDTO crear({{ module.entity_name }}CrearRequestDTO request) {
+        {{ module.entity_name }} entity = new {{ module.entity_name }}();
+{% if module.has_cod_field %}
+        entity.setCod{{ module.entity_name }}(repository.findMaxCod{{ module.entity_name }}() + 1);
+{% endif %}
+{% for field in module.fields %}
+        entity.set{{ field.name[0] | upper }}{{ field.name[1:] }}(request.get{{ field.name[0] | upper }}{{ field.name[1:] }}());
+{% endfor %}
+        entity.setEstado(true);
+        entity.setFechaCreacion(LocalDateTime.now());
+        entity.setUsuarioCreacion(auditoriaProvider.getUsuarioActual());
+
+        {{ module.entity_name }} saved = repository.save(entity);
+        return toResponseDTO(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public {{ module.entity_name }}ResponseDTO obtenerPorId(Long id) {
+        {{ module.entity_name }} entity = repository.findById(id)
+                .orElseThrow(() -> BolivarBusinessException.builder()
+                        .codigo("{{ module.entity_name | upper }}_NO_ENCONTRADO")
+                        .mensaje("{{ module.entity_name }} con ID " + id + " no encontrado")
+                        .categoria(TipoErrorEnum.NEGOCIO)
+                        .build());
+        return toResponseDTO(entity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<{{ module.entity_name }}ResponseDTO> listar(Pageable pageable, {{ module.entity_name }}FiltrosRequestDTO filtros) {
+        return repository.findAll({{ module.entity_name }}Specification.withFilters(filtros), pageable)
+                .map(this::toResponseDTO);
+    }
+
+    @Override
+    public {{ module.entity_name }}ResponseDTO actualizar(Long id, {{ module.entity_name }}ActualizarRequestDTO request) {
+        {{ module.entity_name }} entity = repository.findById(id)
+                .orElseThrow(() -> BolivarBusinessException.builder()
+                        .codigo("{{ module.entity_name | upper }}_NO_ENCONTRADO")
+                        .mensaje("{{ module.entity_name }} con ID " + id + " no encontrado")
+                        .categoria(TipoErrorEnum.NEGOCIO)
+                        .build());
+
+{% for field in module.fields %}
+        if (request.get{{ field.name[0] | upper }}{{ field.name[1:] }}() != null) {
+            entity.set{{ field.name[0] | upper }}{{ field.name[1:] }}(request.get{{ field.name[0] | upper }}{{ field.name[1:] }}());
+        }
+{% endfor %}
+        entity.setFechaActualizacion(LocalDateTime.now());
+        entity.setUsuarioActualizacion(auditoriaProvider.getUsuarioActual());
+
+        {{ module.entity_name }} saved = repository.save(entity);
+        return toResponseDTO(saved);
+    }
+
+    @Override
+    public void eliminar(Long id) {
+        {{ module.entity_name }} entity = repository.findById(id)
+                .orElseThrow(() -> BolivarBusinessException.builder()
+                        .codigo("{{ module.entity_name | upper }}_NO_ENCONTRADO")
+                        .mensaje("{{ module.entity_name }} con ID " + id + " no encontrado")
+                        .categoria(TipoErrorEnum.NEGOCIO)
+                        .build());
+        entity.setEstado(false);
+        entity.setFechaActualizacion(LocalDateTime.now());
+        entity.setUsuarioActualizacion(auditoriaProvider.getUsuarioActual());
+        repository.save(entity);
+    }
+
+    private {{ module.entity_name }}ResponseDTO toResponseDTO({{ module.entity_name }} entity) {
+        {{ module.entity_name }}ResponseDTO dto = new {{ module.entity_name }}ResponseDTO();
+        dto.setId{{ module.entity_name }}(entity.getId{{ module.entity_name }}());
+{% if module.has_cod_field %}
+        dto.setCod{{ module.entity_name }}(entity.getCod{{ module.entity_name }}());
+{% endif %}
+{% for field in module.fields %}
+        dto.set{{ field.name[0] | upper }}{{ field.name[1:] }}(entity.get{{ field.name[0] | upper }}{{ field.name[1:] }}());
+{% endfor %}
+        dto.setEstado(entity.getEstado());
+        dto.setFechaCreacion(entity.getFechaCreacion());
+        dto.setUsuarioCreacion(entity.getUsuarioCreacion());
+        dto.setFechaActualizacion(entity.getFechaActualizacion());
+        dto.setUsuarioActualizacion(entity.getUsuarioActualizacion());
+        return dto;
+    }
+}

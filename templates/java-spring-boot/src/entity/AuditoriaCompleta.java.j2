@@ -1,0 +1,29 @@
+package {{ base_package }}.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.MappedSuperclass;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+
+/**
+ * Campos de auditoria completos: creacion y actualizacion.
+ */
+@MappedSuperclass
+@Getter
+@Setter
+public abstract class AuditoriaCompleta {
+
+    @Column(name = "fecha_creacion")
+    private LocalDateTime fechaCreacion;
+
+    @Column(name = "usuario_creacion", length = 255)
+    private String usuarioCreacion;
+
+    @Column(name = "fecha_actualizacion")
+    private LocalDateTime fechaActualizacion;
+
+    @Column(name = "usuario_actualizacion", length = 255)
+    private String usuarioActualizacion;
+}

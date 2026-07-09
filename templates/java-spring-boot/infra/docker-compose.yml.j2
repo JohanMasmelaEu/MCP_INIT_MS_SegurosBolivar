@@ -1,0 +1,137 @@
+# Docker Compose para desarrollo local: LocalStack (AWS) + mock OAuth + app.
+# Desde esta carpeta: docker compose --env-file ../../.env up -d
+
+name: {{ project_name | replace("-", "") }}-local
+
+services:
+  localstack:
+    image: localstack/localstack:3.0
+    container_name: {{ project_name }}-localstack
+    ports:
+      - "127.0.0.1:4566:4566"
+    environment:
+      SERVICES: ssm{% if integrations.uses_s3 %},s3{% endif %}{% if integrations.uses_sqs %},sqs{% endif %},events
+      DEBUG: "0"
+      PERSISTENCE: "0"
+      AWS_DEFAULT_REGION: us-east-1
+    tmpfs:
+      - /var/lib/localstack
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - {{ project_name | replace("-", "") }}-local
+
+  mock-oauth:
+    image: ghcr.io/navikt/mock-oauth2-server:2.1.10
+    container_name: {{ project_name }}-mock-oauth
+    ports:
+      - "127.0.0.1:8090:8080"
+    environment:
+      JSON_CONFIG_PATH: /config/mock-oauth-config.json
+    volumes:
+      - ./config/mock-oauth-config.json:/config/mock-oauth-config.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/default/.well-known/openid-configuration"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - {{ project_name | replace("-", "") }}-local
+
+  seed-ssm:
+    image: amazon/aws-cli:2.15.0
+    container_name: {{ project_name }}-seed-ssm
+    entrypoint: ["sh", "/config/seed-localstack-ssm.sh"]
+    volumes:
+      - ./scripts/seed-localstack-ssm.sh:/config/seed-localstack-ssm.sh:ro
+    depends_on:
+      localstack:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - {{ project_name | replace("-", "") }}-local
+{% if observability.datadog_enabled %}
+
+  datadog-agent:
+    image: gcr.io/datadoghq/agent:7
+    container_name: {{ project_name }}-dd-agent
+    ports:
+      - "127.0.0.1:8126:8126"
+      - "127.0.0.1:8125:8125/udp"
+    environment:
+      DD_API_KEY: "local-dev-no-forward-key-000000000000"
+      DD_APM_ENABLED: "true"
+      DD_APM_NON_LOCAL_TRAFFIC: "true"
+      DD_LOGS_ENABLED: "true"
+      DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: "true"
+      DD_APM_RECEIVER_PORT: "8126"
+      DD_DD_URL: "http://localhost:1"
+      DD_LOGS_CONFIG_LOGS_DD_URL: "http://localhost:1"
+      DD_HOSTNAME: "local-dev"
+      DD_ENV: "local"
+      DD_LOG_LEVEL: "INFO"
+    healthcheck:
+      test: ["CMD", "agent", "health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - {{ project_name | replace("-", "") }}-local
+{% endif %}
+
+  app:
+    build:
+      context: ../..
+      dockerfile: development/docker-local-ms/Dockerfile
+      args:
+        ARTIFACTORY_USER: ${ARTIFACTORY_USER?ARTIFACTORY_USER requerido para build}
+        ARTIFACTORY_PASSWORD: ${ARTIFACTORY_PASSWORD?ARTIFACTORY_PASSWORD requerido para build}
+    container_name: {{ project_name }}-app
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      SERVER_PORT: "8080"
+      APP_AUTH_USE_API_GATEWAY: "true"
+      APP_OAUTH_COGNITO_CLIENT_ID: {{ context_path_clean }}-local-client
+      APP_OAUTH_COGNITO_CLIENT_SECRET: {{ context_path_clean }}-local-secret
+      APP_OAUTH_COGNITO_DOMAIN: mock-oauth:8080
+      APP_OAUTH_COGNITO_TOKEN_URI_SCHEME: http
+      APP_OAUTH_COGNITO_TOKEN_URI_PATH: /default/token
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: "http://localhost:*,http://127.0.0.1:*,http://host.docker.internal:*,https://localhost:*"
+      APP_OAUTH_REFRESH_COOKIE_PATH: "{{ context_path }}"
+      SPRING_PROFILES_ACTIVE: "local"
+      ENV_PREFIX: ${ENV_PREFIX:-dev}
+      AWS_ENDPOINT_URL_SSM: "http://localstack:4566"
+      AWS_ACCESS_KEY_ID: "test"
+      AWS_SECRET_ACCESS_KEY: "test"
+      AWS_DEFAULT_REGION: "us-east-1"
+{% if observability.datadog_enabled %}
+      DD_AGENT_HOST: "datadog-agent"
+      DD_TRACE_AGENT_PORT: "8126"
+      DD_SERVICE: "{{ dd_service }}"
+      DD_ENV: "local"
+      DD_VERSION: "0.0.1-SNAPSHOT"
+      DD_LOGS_INJECTION: "true"
+{% endif %}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      seed-ssm:
+        condition: service_completed_successfully
+      mock-oauth:
+        condition: service_healthy
+{% if observability.datadog_enabled %}
+      datadog-agent:
+        condition: service_healthy
+{% endif %}
+    networks:
+      - {{ project_name | replace("-", "") }}-local
+
+networks:
+  {{ project_name | replace("-", "") }}-local:
+    driver: bridge

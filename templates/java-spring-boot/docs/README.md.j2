@@ -1,0 +1,127 @@
+# {{ project_name }}
+
+{{ api_description }}
+
+---
+
+## Stack Tecnologico
+
+| Componente | Version |
+|------------|---------|
+| Java | 21 LTS |
+| Spring Boot | 4.0.2 |
+| Gradle | 9.4.1 |
+| PostgreSQL | 15+ |
+| Docker | Requerido para desarrollo local |
+
+---
+
+## Requisitos
+
+- JDK 21
+- Docker Desktop
+- Credenciales Artifactory (ARTIFACTORY_USER / ARTIFACTORY_PASSWORD)
+
+---
+
+## Desarrollo Local
+
+### 1. Configurar variables de entorno
+
+Copiar `development/.env.sample` a `.env` en la raiz y completar:
+
+```bash
+ARTIFACTORY_USER=tu_usuario
+ARTIFACTORY_PASSWORD=tu_password
+```
+
+### 2. Levantar infraestructura local
+
+```bash
+cd development/docker-local-ms
+docker compose --env-file ../../.env up -d
+```
+
+Esto levanta:
+- **LocalStack** (SSM Parameter Store{% if integrations.uses_s3 %}, S3{% endif %}{% if integrations.uses_sqs %}, SQS{% endif %})
+- **Mock OAuth** (simula Cognito)
+{% if observability.datadog_enabled %}
+- **Datadog Agent** (modo no-forward, validacion de instrumentacion)
+{% endif %}
+- **App** (el microservicio compilado)
+
+### 3. Verificar
+
+- Swagger UI: [http://localhost:8080{{ context_path }}/swagger-ui.html](http://localhost:8080{{ context_path }}/swagger-ui.html)
+- Health: [http://localhost:8080{{ context_path }}/actuator/health](http://localhost:8080{{ context_path }}/actuator/health)
+- OpenAPI JSON: [http://localhost:8080{{ context_path }}{{ openapi_path }}](http://localhost:8080{{ context_path }}{{ openapi_path }})
+
+### 4. Detener
+
+```bash
+cd development/docker-local-ms
+./down.ps1   # Windows
+./down.sh    # Unix
+```
+
+---
+
+## Estructura del Proyecto
+
+```
+{{ project_name }}/
+├── build.gradle
+├── src/main/java/...
+│   ├── commons/          (DTOs transversales)
+│   ├── config/           (Configuraciones)
+│   ├── entity/           (Entidades JPA)
+│   ├── errorhandling/    (Excepciones)
+{% for module in modules %}
+│   ├── {{ module.module_name }}/          ({{ module.entity_name }})
+{% endfor %}
+│   └── utils/            (Utilidades)
+├── src/main/resources/
+├── src/test/java/...
+├── development/
+│   └── docker-local-ms/  (Docker Compose local)
+└── .github/workflows/    (CI/CD)
+```
+
+---
+
+## Endpoints
+{% for module in modules %}
+
+### {{ module.entity_name }}
+
+| Metodo | Path | Descripcion |
+|--------|------|-------------|
+| POST | `/api/v1/{{ module.resource_path_resolved }}` | Crear |
+| GET | `/api/v1/{{ module.resource_path_resolved }}` | Listar (paginado) |
+| GET | `/api/v1/{{ module.resource_path_resolved }}/{id}` | Obtener por ID |
+| PUT | `/api/v1/{{ module.resource_path_resolved }}/{id}` | Actualizar |
+| DELETE | `/api/v1/{{ module.resource_path_resolved }}/{id}` | Inactivar |
+{% endfor %}
+
+---
+
+## Testing
+
+```bash
+./gradlew test
+```
+
+Cobertura minima: 85% (JaCoCo). Reporte en `build/jacoco/jacocoTest/`.
+
+---
+
+## CI/CD
+
+- Push a `develop/stage/pre/master` dispara el pipeline institucional.
+- PRs ejecutan analisis automatico.
+
+---
+
+## Autores
+
+- Equipo {{ project_name }}

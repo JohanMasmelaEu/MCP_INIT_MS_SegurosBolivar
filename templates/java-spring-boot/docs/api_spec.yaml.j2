@@ -1,0 +1,155 @@
+openapi: 3.0.3
+info:
+  title: {{ api_description }}
+  description: {{ api_description }}
+  version: {{ api_version }}
+  contact:
+    name: Equipo {{ project_name }}
+
+servers:
+  - url: http://localhost:8080{{ context_path }}
+    description: Local
+
+paths:
+{% for module in modules %}
+  /api/v1/{{ module.resource_path_resolved }}:
+    post:
+      tags:
+        - {{ module.entity_name }}
+      summary: Crear {{ module.entity_name | lower }}
+      operationId: crear{{ module.entity_name }}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/{{ module.entity_name }}CrearRequest'
+      responses:
+        '201':
+          description: Recurso creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse{{ module.entity_name }}'
+    get:
+      tags:
+        - {{ module.entity_name }}
+      summary: Listar {{ module.entity_name | lower }}
+      operationId: listar{{ module.entity_name }}
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Listado paginado
+  /api/v1/{{ module.resource_path_resolved }}/{id}:
+    get:
+      tags:
+        - {{ module.entity_name }}
+      summary: Obtener {{ module.entity_name | lower }} por ID
+      operationId: obtener{{ module.entity_name }}
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: No encontrado
+    put:
+      tags:
+        - {{ module.entity_name }}
+      summary: Actualizar {{ module.entity_name | lower }}
+      operationId: actualizar{{ module.entity_name }}
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/{{ module.entity_name }}ActualizarRequest'
+      responses:
+        '200':
+          description: Actualizado
+    delete:
+      tags:
+        - {{ module.entity_name }}
+      summary: Inactivar {{ module.entity_name | lower }}
+      operationId: eliminar{{ module.entity_name }}
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Inactivado
+{% endfor %}
+
+components:
+  schemas:
+{% for module in modules %}
+    {{ module.entity_name }}CrearRequest:
+      type: object
+      properties:
+{% for field in module.fields %}
+        {{ field.name }}:
+          type: {% if field.field_type.value == "String" %}string{% elif field.field_type.value in ["Long", "Integer"] %}integer{% elif field.field_type.value == "Boolean" %}boolean{% elif field.field_type.value == "BigDecimal" %}number{% else %}string{% endif %}
+
+{% endfor %}
+    {{ module.entity_name }}ActualizarRequest:
+      type: object
+      properties:
+{% for field in module.fields %}
+        {{ field.name }}:
+          type: {% if field.field_type.value == "String" %}string{% elif field.field_type.value in ["Long", "Integer"] %}integer{% elif field.field_type.value == "Boolean" %}boolean{% elif field.field_type.value == "BigDecimal" %}number{% else %}string{% endif %}
+
+{% endfor %}
+    ApiResponse{{ module.entity_name }}:
+      type: object
+      properties:
+        codigo:
+          type: string
+        mensaje:
+          type: string
+        data:
+          $ref: '#/components/schemas/{{ module.entity_name }}Response'
+    {{ module.entity_name }}Response:
+      type: object
+      properties:
+        id{{ module.entity_name }}:
+          type: integer
+          format: int64
+{% if module.has_cod_field %}
+        cod{{ module.entity_name }}:
+          type: integer
+          format: int64
+{% endif %}
+{% for field in module.fields %}
+        {{ field.name }}:
+          type: {% if field.field_type.value == "String" %}string{% elif field.field_type.value in ["Long", "Integer"] %}integer{% elif field.field_type.value == "Boolean" %}boolean{% elif field.field_type.value == "BigDecimal" %}number{% else %}string{% endif %}
+
+{% endfor %}
+        estado:
+          type: boolean
+{% endfor %}

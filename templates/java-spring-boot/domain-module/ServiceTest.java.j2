@@ -1,0 +1,80 @@
+package {{ base_package }}.{{ module.module_name }}.services;
+
+import {{ base_package }}.commons.UsuarioAuditoriaProvider;
+import {{ base_package }}.entity.{{ module.entity_name }};
+import {{ base_package }}.errorhandling.BolivarBusinessException;
+import {{ base_package }}.{{ module.module_name }}.dto.{{ module.entity_name }}CrearRequestDTO;
+import {{ base_package }}.{{ module.module_name }}.repository.{{ module.entity_name }}Repository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+/**
+ * Test unitario para {{ module.entity_name }}ServiceImpl con Mockito.
+ */
+@ExtendWith(MockitoExtension.class)
+class {{ module.entity_name }}ServiceTest {
+
+    @Mock
+    private {{ module.entity_name }}Repository repository;
+
+    @Mock
+    private UsuarioAuditoriaProvider auditoriaProvider;
+
+    @InjectMocks
+    private {{ module.entity_name }}ServiceImpl service;
+
+    @Test
+    void obtenerPorId_cuandoNoExiste_deberiaLanzarExcepcion() {
+        // Given
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        // When / Then
+        BolivarBusinessException ex = assertThrows(BolivarBusinessException.class,
+                () -> service.obtenerPorId(99L));
+        assertEquals("{{ module.entity_name | upper }}_NO_ENCONTRADO", ex.getCodigo());
+    }
+
+    @Test
+    void obtenerPorId_cuandoExiste_deberiaRetornarDTO() {
+        // Given
+        {{ module.entity_name }} entity = new {{ module.entity_name }}();
+        entity.setId{{ module.entity_name }}(1L);
+        entity.setEstado(true);
+        when(repository.findById(1L)).thenReturn(Optional.of(entity));
+
+        // When
+        var result = service.obtenerPorId(1L);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1L, result.getId{{ module.entity_name }}());
+        assertTrue(result.getEstado());
+    }
+
+    @Test
+    void eliminar_cuandoExiste_deberiaInactivar() {
+        // Given
+        {{ module.entity_name }} entity = new {{ module.entity_name }}();
+        entity.setId{{ module.entity_name }}(1L);
+        entity.setEstado(true);
+        when(repository.findById(1L)).thenReturn(Optional.of(entity));
+        when(auditoriaProvider.getUsuarioActual()).thenReturn("testUser");
+        when(repository.save(any())).thenReturn(entity);
+
+        // When
+        service.eliminar(1L);
+
+        // Then
+        assertFalse(entity.getEstado());
+        verify(repository).save(entity);
+    }
+}

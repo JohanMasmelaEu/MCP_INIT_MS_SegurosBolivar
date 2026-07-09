@@ -1,0 +1,27 @@
+package {{ base_package }}.{{ module.module_name }}.repository;
+
+import {{ base_package }}.entity.{{ module.entity_name }};
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+{% if module.has_cod_field %}
+import org.springframework.data.jpa.repository.Query;
+import java.util.Optional;
+{% endif %}
+
+/**
+ * Repositorio JPA para la entidad {{ module.entity_name }}.
+ * JpaSpecificationExecutor permite listar con filtros dinamicos.
+ */
+public interface {{ module.entity_name }}Repository extends JpaRepository<{{ module.entity_name }}, Long>,
+        JpaSpecificationExecutor<{{ module.entity_name }}> {
+{% if module.has_cod_field %}
+
+    Optional<{{ module.entity_name }}> findByCod{{ module.entity_name }}(Long cod{{ module.entity_name }});
+
+    /**
+     * Mayor cod{{ module.entity_name }} existente (0 si no hay registros).
+     */
+    @Query("SELECT COALESCE(MAX(e.cod{{ module.entity_name }}), 0) FROM {{ module.entity_name }} e")
+    long findMaxCod{{ module.entity_name }}();
+{% endif %}
+}

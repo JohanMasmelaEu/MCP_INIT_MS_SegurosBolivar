@@ -1,0 +1,16 @@
+package {{ base_package }}.commons;
+
+/**
+ * Contrato del DTO general de respuesta del API.
+ * Todas las respuestas con cuerpo implementan este contrato (codigo, mensaje, data).
+ *
+ * @param <T> tipo del payload en getData()
+ */
+public interface ApiResponseDTO<T> {
+
+    String getCodigo();
+
+    String getMensaje();
+
+    T getData();
+}

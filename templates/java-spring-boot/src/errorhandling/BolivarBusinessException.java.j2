@@ -1,0 +1,75 @@
+package {{ base_package }}.errorhandling;
+
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * Excepcion de negocio con builder pattern.
+ * Usar para errores controlados con codigo, mensaje y detalles.
+ */
+public class BolivarBusinessException extends RuntimeException {
+
+    private final String codigo;
+    private final String mensaje;
+    private final TipoErrorEnum categoria;
+    private final List<String> detalles;
+
+    private BolivarBusinessException(String codigo, String mensaje, TipoErrorEnum categoria, List<String> detalles) {
+        super(mensaje);
+        this.codigo = codigo;
+        this.mensaje = mensaje;
+        this.categoria = categoria;
+        this.detalles = detalles == null ? null : List.copyOf(detalles);
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public String getCodigo() {
+        return codigo;
+    }
+
+    public String getMensaje() {
+        return mensaje;
+    }
+
+    public TipoErrorEnum getCategoria() {
+        return categoria;
+    }
+
+    public List<String> getDetalles() {
+        return detalles == null ? null : Collections.unmodifiableList(detalles);
+    }
+
+    public static final class Builder {
+        private String codigo;
+        private String mensaje;
+        private TipoErrorEnum categoria;
+        private List<String> detalles;
+
+        public Builder codigo(String codigo) {
+            this.codigo = codigo;
+            return this;
+        }
+
+        public Builder mensaje(String mensaje) {
+            this.mensaje = mensaje;
+            return this;
+        }
+
+        public Builder categoria(TipoErrorEnum categoria) {
+            this.categoria = categoria;
+            return this;
+        }
+
+        public Builder detalles(List<String> detalles) {
+            this.detalles = detalles;
+            return this;
+        }
+
+        public BolivarBusinessException build() {
+            return new BolivarBusinessException(codigo, mensaje, categoria, detalles);
+        }
+    }
+}

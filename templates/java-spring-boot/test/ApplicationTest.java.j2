@@ -1,0 +1,19 @@
+package {{ base_package }};
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+/**
+ * Test de carga del contexto Spring. Valida que la aplicacion arranca sin errores.
+ */
+@SpringBootTest
+@ActiveProfiles("test")
+class {{ application_class }}Test {
+
+    @Test
+    void contextLoads() {
+        // Valida que el contexto Spring carga correctamente
+    }
+
+}

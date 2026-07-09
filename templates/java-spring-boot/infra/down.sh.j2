@@ -1,0 +1,4 @@
+#!/bin/sh
+# Detiene y elimina contenedores, redes y volumenes del compose local.
+cd "$(dirname "$0")"
+docker compose --env-file ../../.env down -v

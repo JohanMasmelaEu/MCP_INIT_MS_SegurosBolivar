@@ -1,0 +1,16 @@
+package {{ base_package }};
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+/**
+ * Clase principal del microservicio {{ project_name }}.
+ */
+@SpringBootApplication
+public class {{ application_class }} {
+
+    public static void main(String[] args) {
+        SpringApplication.run({{ application_class }}.class, args);
+    }
+
+}

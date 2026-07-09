@@ -1,0 +1,85 @@
+# Contexto del API — {{ project_name }}
+
+## Generalidades
+
+Microservicio **Java 21 / Spring Boot 4.x**, expuesto a traves de AWS API Gateway sobre VPC Link.
+
+**Base de la URL publica:**
+```
+https://<api-gateway>/<stage>/{{ context_path_clean }}/api/v1/...
+```
+**En local:**
+```
+http://localhost:8080{{ context_path }}/api/v1/...
+```
+
+El **context-path** del servlet es `{{ context_path }}`. Los controladores agregan `/api/v1/...`.
+
+---
+
+## Envoltura de respuesta estandar
+
+**Exito con cuerpo (200 / 201 / 202):**
+```json
+{
+  "codigo": "OK",
+  "mensaje": "Operacion exitosa",
+  "data": { ... }
+}
+```
+
+**Error (4xx / 5xx):**
+```json
+{
+  "codigo": "CODIGO_ERROR",
+  "mensaje": "Descripcion del error",
+  "detalles": ["campo: descripcion del error"]
+}
+```
+
+---
+
+## Paginacion (listados)
+
+| Param | Default | Descripcion |
+|---|---|---|
+| `page` | `0` | Pagina base 0 |
+| `size` | `10` | Elementos por pagina |
+| `sort` | *(por endpoint)* | p. ej. `nombre,asc` |
+
+---
+
+## Endpoints por dominio
+{% for module in modules %}
+
+### {{ module.entity_name }}
+
+| Metodo | Path | Descripcion |
+|---|---|---|
+| `POST` | `/api/v1/{{ module.resource_path_resolved }}` | Crear {{ module.entity_name | lower }} |
+| `GET` | `/api/v1/{{ module.resource_path_resolved }}` | Listar (paginado) |
+| `GET` | `/api/v1/{{ module.resource_path_resolved }}/{id}` | Obtener por ID |
+| `PUT` | `/api/v1/{{ module.resource_path_resolved }}/{id}` | Actualizar |
+| `DELETE` | `/api/v1/{{ module.resource_path_resolved }}/{id}` | Inactivar (logico) → 204 |
+{% endfor %}
+
+---
+
+## Diagnostico
+
+| Endpoint | Descripcion |
+|---|---|
+| `GET /actuator/health` | Health check |
+| `GET {{ openapi_path }}` | OpenAPI JSON |
+| `GET /swagger-ui.html` | Swagger UI |
+
+---
+
+## Codigos de error de negocio
+{% for module in modules %}
+
+| `{{ module.entity_name | upper }}_NO_ENCONTRADO` | 404 | {{ module.entity_name }} no existe |
+{% endfor %}
+| `BAD_REQUEST` | 400 | Validacion fallida |
+| `INTERNAL_ERROR` | 500 | Error no controlado |
+| `SERVICE_UNAVAILABLE` | 503 | Error de acceso a datos |

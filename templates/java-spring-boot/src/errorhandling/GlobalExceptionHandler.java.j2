@@ -1,0 +1,103 @@
+package {{ base_package }}.errorhandling;
+
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * Manejador global de excepciones. Centraliza las respuestas de error del API.
+ * Errores genericos al cliente, detalles solo en logs internos.
+ */
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    private static final Logger LOG = Logger.getLogger(GlobalExceptionHandler.class.getName());
+
+    @ExceptionHandler(BolivarBusinessException.class)
+    public ResponseEntity<Map<String, Object>> handleBusinessException(BolivarBusinessException ex) {
+        HttpStatus status = resolveHttpStatus(ex);
+        Map<String, Object> body = Map.of(
+                "codigo", ex.getCodigo(),
+                "mensaje", ex.getMensaje(),
+                "detalles", ex.getDetalles() != null ? ex.getDetalles() : List.of()
+        );
+        return ResponseEntity.status(status).body(body);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
+        List<String> detalles = ex.getBindingResult().getFieldErrors().stream()
+                .map(e -> e.getField() + ": " + e.getDefaultMessage())
+                .toList();
+        return ResponseEntity.badRequest().body(Map.of(
+                "codigo", "BAD_REQUEST",
+                "mensaje", "Solicitud invalida",
+                "detalles", detalles
+        ));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleUnreadable(HttpMessageNotReadableException ex) {
+        return ResponseEntity.badRequest().body(Map.of(
+                "codigo", "BAD_REQUEST",
+                "mensaje", "Cuerpo de la solicitud no legible"
+        ));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.badRequest().body(Map.of(
+                "codigo", "BAD_REQUEST",
+                "mensaje", "Tipo de parametro invalido: " + ex.getName()
+        ));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        LOG.log(Level.WARNING, "DataIntegrityViolation", ex);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "codigo", "CONFLICT",
+                "mensaje", "Violacion de integridad de datos"
+        ));
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<Map<String, Object>> handleDataAccess(DataAccessException ex) {
+        LOG.log(Level.SEVERE, "DataAccessException", ex);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                "codigo", "SERVICE_UNAVAILABLE",
+                "mensaje", "Error de acceso a datos"
+        ));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+        LOG.log(Level.SEVERE, "Unhandled exception", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "codigo", "INTERNAL_ERROR",
+                "mensaje", "Error interno"
+        ));
+    }
+
+    private static HttpStatus resolveHttpStatus(BolivarBusinessException ex) {
+        String codigo = ex.getCodigo();
+        if (codigo == null) return HttpStatus.INTERNAL_SERVER_ERROR;
+        if (codigo.contains("NO_ENCONTRADO") || codigo.contains("NOT_FOUND")) return HttpStatus.NOT_FOUND;
+        if (codigo.contains("DUPLICADO") || codigo.contains("CONFLICT")) return HttpStatus.CONFLICT;
+        if (codigo.contains("BAD_REQUEST")) return HttpStatus.BAD_REQUEST;
+        if (codigo.contains("FORBIDDEN")) return HttpStatus.FORBIDDEN;
+        if (ex.getCategoria() == TipoErrorEnum.NEGOCIO) return HttpStatus.BAD_REQUEST;
+        return HttpStatus.INTERNAL_SERVER_ERROR;
+    }
+}

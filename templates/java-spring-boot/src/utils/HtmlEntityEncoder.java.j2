@@ -1,0 +1,35 @@
+package {{ base_package }}.utils;
+
+/**
+ * Codifica strings con HTML entities para mitigar XSS en respuestas API.
+ */
+public final class HtmlEntityEncoder {
+
+    private HtmlEntityEncoder() {
+        // Utility class
+    }
+
+    /**
+     * Codifica caracteres peligrosos como HTML entities.
+     *
+     * @param input texto a codificar
+     * @return texto con HTML entities o null si input es null
+     */
+    public static String encode(String input) {
+        if (input == null) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder(input.length());
+        for (char c : input.toCharArray()) {
+            switch (c) {
+                case '&' -> sb.append("&amp;");
+                case '<' -> sb.append("&lt;");
+                case '>' -> sb.append("&gt;");
+                case '"' -> sb.append("&quot;");
+                case '\'' -> sb.append("&#x27;");
+                default -> sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+}

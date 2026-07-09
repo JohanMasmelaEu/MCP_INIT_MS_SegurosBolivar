@@ -1,0 +1,14 @@
+name: Microservice Template
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop, stage, pre, master]
+
+jobs:
+  microservice-pipeline:
+    secrets: inherit
+    uses: segurosbolivar/devops-actions-microservices-templates/.github/workflows/template.yml@v1.0.0
+    with:
+      language_package_manager: "gradle"
+      language_version: "21"

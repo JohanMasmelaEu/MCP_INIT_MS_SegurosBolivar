@@ -1,0 +1,71 @@
+package {{ base_package }}.{{ module.module_name }}.controller;
+
+import {{ base_package }}.{{ module.module_name }}.dto.{{ module.entity_name }}ResponseDTO;
+import {{ base_package }}.{{ module.module_name }}.services.{{ module.entity_name }}Service;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * Test de integracion para {{ module.entity_name }}Controller con MockMvc.
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class {{ module.entity_name }}ControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockBean
+    private {{ module.entity_name }}Service {{ module.entity_name | lower }}Service;
+
+    @Test
+    void crear_deberiaRetornar201() throws Exception {
+        // Given
+        {{ module.entity_name }}ResponseDTO response = new {{ module.entity_name }}ResponseDTO();
+        response.setId{{ module.entity_name }}(1L);
+        response.setEstado(true);
+        when({{ module.entity_name | lower }}Service.crear(any())).thenReturn(response);
+
+        String body = "{}"; // TODO: completar con campos requeridos
+
+        // When / Then
+        mockMvc.perform(post("/api/v1/{{ module.resource_path_resolved }}")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.codigo").value("OK"));
+    }
+
+    @Test
+    void obtenerPorId_deberiaRetornar200() throws Exception {
+        // Given
+        {{ module.entity_name }}ResponseDTO response = new {{ module.entity_name }}ResponseDTO();
+        response.setId{{ module.entity_name }}(1L);
+        when({{ module.entity_name | lower }}Service.obtenerPorId(1L)).thenReturn(response);
+
+        // When / Then
+        mockMvc.perform(get("/api/v1/{{ module.resource_path_resolved }}/1")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.codigo").value("OK"))
+                .andExpect(jsonPath("$.data.id{{ module.entity_name }}").value(1));
+    }
+}

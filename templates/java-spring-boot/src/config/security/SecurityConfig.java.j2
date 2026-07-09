@@ -1,0 +1,102 @@
+package {{ base_package }}.config.security;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ * Configuracion de Spring Security.
+{% if auth_strategy == "deferred" %}
+ * TODO: Definir estrategia de autenticacion. Actualmente en modo placeholder (permitAll).
+ * Opciones: OAuth2 Resource Server, API Gateway delegated, Machine-to-machine.
+{% elif auth_strategy == "api-gateway-delegated" %}
+ * Modo: API Gateway delegated — confia en el gateway, sin validacion local de JWT.
+{% elif auth_strategy == "oauth2-resource-server" %}
+ * Modo: OAuth2 Resource Server — valida JWT localmente.
+{% elif auth_strategy == "machine-to-machine" %}
+ * Modo: Machine-to-machine — validacion de client_credentials scope.
+{% endif %}
+ */
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Value("${app.cors.allowed-origin-patterns:}")
+    private String allowedOriginPatterns;
+
+    @Value("${app.auth.use-api-gateway:false}")
+    private boolean useApiGateway;
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .accessDeniedHandler(new ApiErrorAccessDeniedHandler())
+                        .authenticationEntryPoint(new ApiErrorAuthenticationEntryPoint()));
+
+        // CORS
+        if (allowedOriginPatterns != null && !allowedOriginPatterns.isBlank()) {
+            http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
+        }
+
+{% if auth_strategy == "deferred" %}
+        // TODO: Implementar autenticacion cuando se defina la estrategia.
+        // Por ahora todas las rutas estan permitidas.
+        http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+{% elif auth_strategy == "api-gateway-delegated" %}
+        // API Gateway se encarga de la autenticacion. MS permite todo.
+        http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+{% elif auth_strategy == "oauth2-resource-server" %}
+        http.authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/**", "/swagger-ui/**", "{{ openapi_path }}/**").permitAll()
+                .anyRequest().authenticated()
+        );
+        http.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}));
+{% elif auth_strategy == "machine-to-machine" %}
+        http.authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/**", "/swagger-ui/**", "{{ openapi_path }}/**").permitAll()
+                .anyRequest().authenticated()
+        );
+        http.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}));
+{% endif %}
+
+        // Security headers filter
+        http.addFilterAfter(new SecurityHeadersFilter(),
+                org.springframework.security.web.context.SecurityContextHolderFilter.class);
+
+        return http.build();
+    }
+
+    private UrlBasedCorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOriginPatterns(splitCommaSeparated(allowedOriginPatterns));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
+    private static List<String> splitCommaSeparated(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+    }
+}

@@ -1,0 +1,22 @@
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+
+server:
+  port: ${SERVER_PORT:8080}
+
+app:
+  cors:
+    allowed-origin-patterns: "http://localhost:*,http://127.0.0.1:*,http://[::1]:*,https://localhost:*,https://127.0.0.1:*,https://host.docker.internal:*"
+  oauth:
+    cognito:
+      domain: ${APP_OAUTH_COGNITO_DOMAIN:localhost:8090}
+      client-id: ${APP_OAUTH_COGNITO_CLIENT_ID:{{ context_path_clean }}-local-client}
+      client-secret: ${APP_OAUTH_COGNITO_CLIENT_SECRET:{{ context_path_clean }}-local-secret}
+      client-secret-name: ${APP_OAUTH_COGNITO_CLIENT_SECRET_NAME:}
+      token-uri-scheme: ${APP_OAUTH_COGNITO_TOKEN_URI_SCHEME:http}
+      token-uri-path: ${APP_OAUTH_COGNITO_TOKEN_URI_PATH:/default/token}
+    refresh-cookie:
+      path: {{ context_path }}

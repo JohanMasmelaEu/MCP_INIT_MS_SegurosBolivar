@@ -1,0 +1,23 @@
+package {{ base_package }}.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.MappedSuperclass;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+
+/**
+ * Campos de auditoria solo de creacion (entidades inmutables post-creacion).
+ */
+@MappedSuperclass
+@Getter
+@Setter
+public abstract class AuditoriaSoloCreacion {
+
+    @Column(name = "fecha_creacion")
+    private LocalDateTime fechaCreacion;
+
+    @Column(name = "usuario_creacion", length = 255)
+    private String usuarioCreacion;
+}

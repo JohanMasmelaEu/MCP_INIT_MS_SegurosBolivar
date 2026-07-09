@@ -1,0 +1,4 @@
+# Detiene y elimina contenedores, redes y volumenes del compose local.
+Push-Location $PSScriptRoot
+docker compose --env-file ../../.env down -v
+Pop-Location

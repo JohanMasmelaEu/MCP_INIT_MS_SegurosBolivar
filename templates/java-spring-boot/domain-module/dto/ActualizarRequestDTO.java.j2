@@ -1,0 +1,20 @@
+package {{ base_package }}.{{ module.module_name }}.dto;
+
+import lombok.Getter;
+import lombok.Setter;
+{% for imp in field_imports %}
+import {{ imp }};
+{% endfor %}
+
+/**
+ * DTO de actualizacion para {{ module.entity_name }}.
+ * Todos los campos son opcionales (solo se actualizan los no-null).
+ */
+@Getter
+@Setter
+public class {{ module.entity_name }}ActualizarRequestDTO {
+{% for field in module.fields %}
+
+    private {{ field.field_type.value }} {{ field.name }};
+{% endfor %}
+}

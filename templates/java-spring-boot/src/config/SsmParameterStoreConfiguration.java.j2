@@ -1,0 +1,59 @@
+package {{ base_package }}.config;
+
+import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
+import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClientBuilder;
+import com.amazonaws.services.simplesystemsmanagement.model.GetParametersRequest;
+import com.amazonaws.services.simplesystemsmanagement.model.GetParametersResult;
+import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest;
+import com.amazonaws.services.simplesystemsmanagement.model.GetParameterResult;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Implementacion del ParameterStoreClient usando el SDK oficial de AWS.
+ * Solo se activa cuando app.parameter-store.enabled=true.
+ */
+@Configuration
+@ConditionalOnProperty(name = "app.parameter-store.enabled", havingValue = "true", matchIfMissing = true)
+public class SsmParameterStoreConfiguration {
+
+    @Bean
+    public AWSSimpleSystemsManagement ssmClient() {
+        return AWSSimpleSystemsManagementClientBuilder.defaultClient();
+    }
+
+    @Bean
+    public ParameterStoreClient parameterStoreClient(AWSSimpleSystemsManagement ssmClient) {
+        return new ParameterStoreClient() {
+
+            @Override
+            public Map<String, String> getParameters(List<String> parameterNames) {
+                GetParametersRequest request = new GetParametersRequest()
+                        .withNames(parameterNames)
+                        .withWithDecryption(true);
+                GetParametersResult result = ssmClient.getParameters(request);
+                Map<String, String> params = new HashMap<>();
+                result.getParameters().forEach(p -> params.put(p.getName(), p.getValue()));
+                return params;
+            }
+
+            @Override
+            public String getProperty(String name) {
+                try {
+                    GetParameterRequest request = new GetParameterRequest()
+                            .withName(name)
+                            .withWithDecryption(true);
+                    GetParameterResult result = ssmClient.getParameter(request);
+                    return result.getParameter().getValue();
+                } catch (Exception e) {
+                    return null;
+                }
+            }
+        };
+    }
+}

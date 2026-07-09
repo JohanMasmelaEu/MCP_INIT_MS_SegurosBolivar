@@ -1,0 +1,26 @@
+package {{ base_package }}.config;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Contrato para obtencion de parametros desde AWS Systems Manager Parameter Store (SSM).
+ */
+public interface ParameterStoreClient {
+
+    /**
+     * Obtiene los valores de los parametros indicados por nombre.
+     *
+     * @param parameterNames rutas SSM
+     * @return mapa nombre -> valor
+     */
+    Map<String, String> getParameters(List<String> parameterNames);
+
+    /**
+     * Obtiene el valor de un unico parametro por su nombre.
+     *
+     * @param name ruta del parametro en Parameter Store
+     * @return valor o null si no existe
+     */
+    String getProperty(String name);
+}
