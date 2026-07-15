@@ -23,10 +23,17 @@ COPY templates/ ./templates/
 COPY blueprints/ ./blueprints/
 COPY rules/ ./rules/
 
-# El workspace del usuario se monta en /workspace
-VOLUME ["/workspace"]
+# /repos: bind mount al directorio de repos del host (ej: C:/REPOS)
+# Los proyectos generados se escriben aqui.
+VOLUME ["/repos"]
+
+# /settings: volumen nombrado para persistir configuracion entre sesiones
+# (directorio de salida configurado, preferencias del usuario)
+VOLUME ["/settings"]
 
 ENV PYTHONUNBUFFERED=1
-ENV MCP_WORKSPACE_PATH=/workspace
+
+# Puerto del Archetype Visualizer UI
+EXPOSE 9752
 
 ENTRYPOINT ["python", "-m", "src.server"]

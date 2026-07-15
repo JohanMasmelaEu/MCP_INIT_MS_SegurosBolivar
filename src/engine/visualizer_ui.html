@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCP Init MS - Archetype Visualizer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #000000;
+  --surface: rgba(28,28,30,0.72);
+  --surface-solid: #1c1c1e;
+  --surface-border: rgba(255,255,255,0.06);
+  --text-primary: rgba(255,255,255,0.92);
+  --text-secondary: rgba(255,255,255,0.55);
+  --text-tertiary: rgba(255,255,255,0.35);
+  --accent-blue: #0a84ff;
+  --accent-purple: #bf5af2;
+  --accent-orange: #ff9f0a;
+  --accent-green: #30d158;
+  --accent-red: #ff453a;
+  --accent-teal: #64d2ff;
+  --radius: 16px;
+  --blur: blur(40px) saturate(1.8);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+  height: 100vh; display: flex; flex-direction: column;
+  background: var(--bg); color: var(--text-primary);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 800px 600px at 20% 30%, rgba(10,132,255,0.04) 0%, transparent 70%),
+    radial-gradient(ellipse 600px 800px at 80% 70%, rgba(191,90,242,0.03) 0%, transparent 70%),
+    radial-gradient(ellipse 900px 400px at 50% 90%, rgba(48,209,88,0.02) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+/* === HEADER === */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px;
+  background: rgba(28,28,30,0.88);
+  backdrop-filter: blur(60px) saturate(2);
+  border-bottom: 1px solid var(--surface-border);
+  z-index: 100;
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.header-logo {
+  font-size: 14px; font-weight: 600; color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+.header-subtitle { font-size: 12px; color: var(--text-tertiary); font-weight: 400; }
+.header-right { display: flex; align-items: center; gap: 8px; }
+.header-badge {
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 11px; font-weight: 500;
+  background: rgba(48,209,88,0.12); color: var(--accent-green);
+  border: 1px solid rgba(48,209,88,0.2);
+}
+.nav-link {
+  padding: 6px 14px; border-radius: 8px;
+  font-size: 12px; font-weight: 500; color: var(--text-secondary);
+  text-decoration: none; transition: all 0.2s;
+  border: 1px solid transparent;
+}
+.nav-link:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+.nav-link.active { background: rgba(10,132,255,0.12); color: var(--accent-blue); border-color: rgba(10,132,255,0.2); }
+
+/* === TABS === */
+.tabs {
+  display: flex; gap: 2px; padding: 12px 24px;
+  background: rgba(20,20,22,0.9);
+  border-bottom: 1px solid var(--surface-border);
+  z-index: 90;
+}
+.tab {
+  padding: 8px 18px; border-radius: 10px;
+  font-size: 12px; font-weight: 500; color: var(--text-secondary);
+  cursor: pointer; transition: all 0.25s; border: 1px solid transparent;
+}
+.tab:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+.tab.active {
+  background: rgba(10,132,255,0.12); color: var(--accent-blue);
+  border-color: rgba(10,132,255,0.2);
+}
+
+/* === MAIN LAYOUT === */
+.main { display: flex; flex: 1; overflow: hidden; z-index: 1; }
+
+/* === TREE PANEL === */
+.tree-panel {
+  width: 380px; overflow-y: auto; padding: 20px;
+  border-right: 1px solid var(--surface-border);
+  background: rgba(18,18,20,0.6);
+}
+.tree-panel h3 {
+  font-size: 11px; font-weight: 500; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px;
+}
+.tree-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 0; font-size: 13px; color: var(--text-secondary);
+  cursor: default; font-weight: 300;
+}
+.tree-item.dir { color: var(--text-primary); font-weight: 400; cursor: pointer; }
+.tree-item.dir:hover { color: var(--accent-blue); }
+.tree-item .icon { font-size: 14px; flex-shrink: 0; width: 18px; text-align: center; }
+.tree-children { padding-left: 18px; border-left: 1px solid rgba(255,255,255,0.04); margin-left: 8px; }
+.tree-children.collapsed { display: none; }
+.tree-item .toggle { font-size: 10px; color: var(--text-tertiary); margin-right: 2px; transition: transform 0.2s; }
+.tree-item .toggle.open { transform: rotate(90deg); }
+.tree-project-name {
+  font-size: 15px; font-weight: 600; color: var(--text-primary);
+  margin-bottom: 16px; letter-spacing: -0.3px;
+}
+
+/* === CONTENT PANEL === */
+.content-panel { flex: 1; overflow-y: auto; padding: 24px 32px; }
+.content-panel h2 {
+  font-size: 18px; font-weight: 600; color: var(--text-primary);
+  margin-bottom: 20px; letter-spacing: -0.4px;
+}
+
+/* Standards table */
+.standards-category {
+  margin-bottom: 28px; padding: 20px;
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--surface-border);
+}
+.standards-category h3 {
+  font-size: 13px; font-weight: 600; color: var(--accent-blue);
+  margin-bottom: 14px; letter-spacing: -0.2px;
+}
+.standards-table { width: 100%; border-collapse: collapse; }
+.standards-table th {
+  text-align: left; font-size: 10px; font-weight: 500;
+  color: var(--text-tertiary); text-transform: uppercase;
+  letter-spacing: 0.6px; padding: 8px 12px;
+  border-bottom: 1px solid var(--surface-border);
+}
+.standards-table td {
+  font-size: 13px; padding: 10px 12px; color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255,255,255,0.02);
+  font-weight: 300;
+}
+.standards-table td:first-child { color: var(--text-primary); font-weight: 400; }
+.standards-table td code {
+  background: rgba(255,255,255,0.04); padding: 2px 6px;
+  border-radius: 4px; font-size: 11px; font-family: "SF Mono", monospace;
+  color: var(--accent-teal);
+}
+
+/* Decisions panel */
+.decision-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.decision-card {
+  padding: 16px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--surface-border);
+}
+.decision-card .label {
+  font-size: 10px; font-weight: 500; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px;
+}
+.decision-card .value {
+  font-size: 14px; font-weight: 500; color: var(--text-primary);
+}
+.decision-card .value.enabled { color: var(--accent-green); }
+.decision-card .value.disabled { color: var(--text-tertiary); }
+
+/* Blueprint view */
+.blueprint-content {
+  padding: 24px; border-radius: var(--radius);
+  background: rgba(28,28,30,0.5); border: 1px solid var(--surface-border);
+  font-size: 13px; line-height: 1.8; color: var(--text-secondary);
+  white-space: pre-wrap; font-family: "SF Mono", "Fira Code", monospace;
+  max-height: calc(100vh - 200px); overflow-y: auto;
+}
+
+/* No project state */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; height: 100%; text-align: center; gap: 16px;
+}
+.empty-state .icon { font-size: 48px; opacity: 0.3; }
+.empty-state h3 { font-size: 16px; font-weight: 500; color: var(--text-secondary); }
+.empty-state p { font-size: 13px; color: var(--text-tertiary); max-width: 400px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+/* Loading */
+.loading { display: flex; align-items: center; justify-content: center; height: 100%; }
+.loading::after {
+  content: ''; width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid var(--surface-border);
+  border-top-color: var(--accent-blue);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Tab content visibility */
+.tab-content { display: none; flex: 1; overflow: hidden; }
+.tab-content.active { display: flex; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <span class="header-logo">MCP Init MS</span>
+    <span class="header-subtitle">Archetype Visualizer</span>
+  </div>
+  <div class="header-right">
+    <span class="header-badge" id="stack-badge">java-spring-boot</span>
+    <a href="/admin" class="nav-link">Admin</a>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="archetype">Arquetipo</div>
+  <div class="tab" data-tab="standards">Estandares del Stack</div>
+  <div class="tab" data-tab="decisions">Decisiones</div>
+  <div class="tab" data-tab="blueprint">Blueprint</div>
+</div>
+
+<!-- ARCHETYPE TAB -->
+<div class="tab-content active" id="tab-archetype">
+  <div class="main">
+    <div class="tree-panel" id="tree-container">
+      <div class="loading"></div>
+    </div>
+    <div class="content-panel" id="archetype-detail">
+      <div class="empty-state">
+        <div class="icon">&#128193;</div>
+        <h3>Selecciona un elemento del arbol</h3>
+        <p>Haz click en un directorio o archivo para ver detalles de su proposito en el arquetipo.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STANDARDS TAB -->
+<div class="tab-content" id="tab-standards">
+  <div class="content-panel" id="standards-container">
+    <div class="loading"></div>
+  </div>
+</div>
+
+<!-- DECISIONS TAB -->
+<div class="tab-content" id="tab-decisions">
+  <div class="content-panel" id="decisions-container">
+    <div class="loading"></div>
+  </div>
+</div>
+
+<!-- BLUEPRINT TAB -->
+<div class="tab-content" id="tab-blueprint">
+  <div class="content-panel" id="blueprint-container">
+    <div class="loading"></div>
+  </div>
+</div>
+
+<script>
+// === STATE ===
+let currentTab = 'archetype';
+let projectData = null;
+let standardsData = null;
+let configData = null;
+let blueprintData = null;
+
+// === TAB MANAGEMENT ===
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    const tabId = tab.dataset.tab;
+    document.getElementById('tab-' + tabId).classList.add('active');
+    currentTab = tabId;
+    loadTabData(tabId);
+  });
+});
+
+function loadTabData(tab) {
+  if (tab === 'archetype' && !projectData) loadArchetype();
+  if (tab === 'standards' && !standardsData) loadStandards();
+  if (tab === 'decisions' && !configData) loadDecisions();
+  if (tab === 'blueprint' && !blueprintData) loadBlueprint();
+}
+
+// === ARCHETYPE ===
+async function loadArchetype() {
+  try {
+    const res = await fetch('/api/archetype');
+    projectData = await res.json();
+    renderTree();
+  } catch (e) {
+    document.getElementById('tree-container').innerHTML =
+      '<div class="empty-state"><div class="icon">&#9888;</div><h3>Error cargando arquetipo</h3></div>';
+  }
+}
+
+function renderTree() {
+  const container = document.getElementById('tree-container');
+  if (projectData.status === 'no_project') {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">&#128640;</div>
+        <h3>Sin proyecto generado</h3>
+        <p>${projectData.message || 'Usa Kiro para generar un proyecto con initialize_project.'}</p>
+      </div>`;
+    return;
+  }
+
+  let html = `<div class="tree-project-name">${projectData.project_name || 'Proyecto'}</div>`;
+  html += '<h3>Estructura de Archivos</h3>';
+  html += renderTreeNodes(projectData.tree || [], 0);
+  container.innerHTML = html;
+
+  // Attach click handlers
+  container.querySelectorAll('.tree-item.dir').forEach(el => {
+    el.addEventListener('click', () => {
+      const children = el.nextElementSibling;
+      const toggle = el.querySelector('.toggle');
+      if (children && children.classList.contains('tree-children')) {
+        children.classList.toggle('collapsed');
+        toggle.classList.toggle('open');
+      }
+    });
+  });
+}
+
+function renderTreeNodes(nodes, depth) {
+  if (!nodes || !nodes.length) return '';
+  let html = '';
+  for (const node of nodes) {
+    if (node.type === 'dir') {
+      html += `<div class="tree-item dir"><span class="toggle open">&#9654;</span><span class="icon">&#128193;</span>${node.name}</div>`;
+      html += `<div class="tree-children">${renderTreeNodes(node.children || [], depth + 1)}</div>`;
+    } else {
+      const icon = getFileIcon(node.name);
+      html += `<div class="tree-item"><span class="icon">${icon}</span>${node.name}</div>`;
+    }
+  }
+  return html;
+}
+
+function getFileIcon(name) {
+  if (name.endsWith('.java')) return '&#9752;';
+  if (name.endsWith('.yml') || name.endsWith('.yaml')) return '&#9881;';
+  if (name.endsWith('.gradle') || name.endsWith('.gradle.kts')) return '&#128230;';
+  if (name.endsWith('.md')) return '&#128196;';
+  if (name.endsWith('.json')) return '&#128203;';
+  if (name.endsWith('.html')) return '&#127760;';
+  if (name.endsWith('.sh')) return '&#128424;';
+  if (name.endsWith('.sql')) return '&#128451;';
+  if (name === 'Dockerfile' || name.startsWith('docker')) return '&#128051;';
+  if (name.startsWith('.git')) return '&#128274;';
+  return '&#128196;';
+}
+
+// === STANDARDS ===
+async function loadStandards() {
+  try {
+    const res = await fetch('/api/standards?stack=java-spring-boot');
+    standardsData = await res.json();
+    renderStandards();
+  } catch (e) {
+    document.getElementById('standards-container').innerHTML =
+      '<div class="empty-state"><div class="icon">&#9888;</div><h3>Error cargando estandares</h3></div>';
+  }
+}
+
+function renderStandards() {
+  const container = document.getElementById('standards-container');
+  let html = `<h2>${standardsData.stack_name}</h2>`;
+
+  for (const cat of standardsData.categories || []) {
+    html += `<div class="standards-category"><h3>${cat.name}</h3><table class="standards-table">`;
+    html += '<thead><tr><th>Regla</th><th>Convencion</th><th>Ejemplo</th></tr></thead><tbody>';
+    for (const rule of cat.rules || []) {
+      html += `<tr><td>${rule.rule}</td><td>${rule.convention}</td><td><code>${rule.example}</code></td></tr>`;
+    }
+    html += '</tbody></table></div>';
+  }
+  container.innerHTML = html;
+}
+
+// === DECISIONS ===
+async function loadDecisions() {
+  try {
+    const res = await fetch('/api/config');
+    configData = await res.json();
+    renderDecisions();
+  } catch (e) {
+    document.getElementById('decisions-container').innerHTML =
+      '<div class="empty-state"><div class="icon">&#9888;</div><h3>Error cargando configuracion</h3></div>';
+  }
+}
+
+function renderDecisions() {
+  const container = document.getElementById('decisions-container');
+
+  if (configData.status === 'no_project') {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">&#128640;</div>
+        <h3>Sin proyecto generado</h3>
+        <p>${configData.message || ''}</p>
+      </div>`;
+    return;
+  }
+
+  const d = configData.decisions || {};
+  let html = '<h2>Decisiones del Proyecto</h2><div class="decision-grid">';
+
+  html += decisionCard('Nombre del Proyecto', d.project_name || 'N/A');
+  html += decisionCard('Autenticacion', d.auth_strategy || 'N/A');
+  html += decisionCard('Base de Datos', d.database || 'N/A');
+  html += decisionCard('Modulos', (d.modules || []).join(', ') || 'Ninguno');
+
+  const integ = d.integrations || {};
+  html += decisionCard('AWS S3', integ.s3 ? 'Habilitado' : 'No', integ.s3);
+  html += decisionCard('AWS SQS', integ.sqs ? 'Habilitado' : 'No', integ.sqs);
+  html += decisionCard('SOAP/WS', integ.soap ? 'Habilitado' : 'No', integ.soap);
+  html += decisionCard('Servicios HTTP Externos', String(integ.external_http || 0));
+  html += decisionCard('Datadog', d.observability ? 'Habilitado' : 'No', d.observability);
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function decisionCard(label, value, isEnabled) {
+  const cls = isEnabled === true ? 'enabled' : isEnabled === false ? 'disabled' : '';
+  return `<div class="decision-card"><div class="label">${label}</div><div class="value ${cls}">${value}</div></div>`;
+}
+
+// === BLUEPRINT ===
+async function loadBlueprint() {
+  try {
+    const res = await fetch('/api/blueprint?stack=java-spring-boot');
+    blueprintData = await res.json();
+    renderBlueprint();
+  } catch (e) {
+    document.getElementById('blueprint-container').innerHTML =
+      '<div class="empty-state"><div class="icon">&#9888;</div><h3>Error cargando blueprint</h3></div>';
+  }
+}
+
+function renderBlueprint() {
+  const container = document.getElementById('blueprint-container');
+  container.innerHTML = `<h2>Blueprint Tecnico</h2><div class="blueprint-content">${escapeHtml(blueprintData.content || 'No disponible.')}</div>`;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// === INIT ===
+loadArchetype();
+</script>
+</body>
+</html>

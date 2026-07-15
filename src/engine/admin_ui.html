@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCP Init MS - Admin: Nuevo Stack</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #000000;
+  --surface: rgba(28,28,30,0.72);
+  --surface-solid: #1c1c1e;
+  --surface-border: rgba(255,255,255,0.06);
+  --text-primary: rgba(255,255,255,0.92);
+  --text-secondary: rgba(255,255,255,0.55);
+  --text-tertiary: rgba(255,255,255,0.35);
+  --accent-blue: #0a84ff;
+  --accent-purple: #bf5af2;
+  --accent-orange: #ff9f0a;
+  --accent-green: #30d158;
+  --accent-red: #ff453a;
+  --accent-teal: #64d2ff;
+  --radius: 16px;
+  --blur: blur(40px) saturate(1.8);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+  min-height: 100vh; display: flex; flex-direction: column;
+  background: var(--bg); color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 800px 600px at 30% 20%, rgba(191,90,242,0.05) 0%, transparent 70%),
+    radial-gradient(ellipse 600px 800px at 70% 80%, rgba(10,132,255,0.04) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+
+/* === HEADER === */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px;
+  background: rgba(28,28,30,0.88);
+  backdrop-filter: blur(60px) saturate(2);
+  border-bottom: 1px solid var(--surface-border);
+  z-index: 100;
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.header-logo { font-size: 14px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px; }
+.header-subtitle { font-size: 12px; color: var(--text-tertiary); }
+.nav-link {
+  padding: 6px 14px; border-radius: 8px;
+  font-size: 12px; font-weight: 500; color: var(--text-secondary);
+  text-decoration: none; transition: all 0.2s; border: 1px solid transparent;
+}
+.nav-link:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+
+/* === MAIN === */
+.main {
+  flex: 1; display: flex; justify-content: center; align-items: flex-start;
+  padding: 40px 24px; z-index: 1; overflow-y: auto;
+}
+.form-container {
+  width: 100%; max-width: 720px;
+}
+.form-container h1 {
+  font-size: 24px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px;
+}
+.form-container .subtitle {
+  font-size: 14px; color: var(--text-secondary); margin-bottom: 32px; line-height: 1.6;
+}
+
+/* === FORM === */
+.form-section {
+  margin-bottom: 28px; padding: 24px;
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--surface-border);
+}
+.form-section h2 {
+  font-size: 13px; font-weight: 600; color: var(--accent-blue);
+  margin-bottom: 16px; letter-spacing: -0.2px;
+}
+.form-row { margin-bottom: 16px; }
+.form-row:last-child { margin-bottom: 0; }
+.form-row label {
+  display: block; font-size: 12px; font-weight: 500;
+  color: var(--text-secondary); margin-bottom: 6px;
+}
+.form-row .hint {
+  font-size: 11px; color: var(--text-tertiary); margin-top: 4px;
+}
+input[type="text"], textarea, select {
+  width: 100%; padding: 10px 14px; border-radius: 10px;
+  background: rgba(255,255,255,0.04); color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 14px; font-family: inherit; font-weight: 300;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(10,132,255,0.4);
+  box-shadow: 0 0 0 3px rgba(10,132,255,0.1);
+}
+textarea { min-height: 80px; resize: vertical; }
+input::placeholder, textarea::placeholder { color: var(--text-tertiary); }
+
+/* Categories dynamic list */
+.categories-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.category-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 12px; font-weight: 500;
+  background: rgba(191,90,242,0.12); color: var(--accent-purple);
+  border: 1px solid rgba(191,90,242,0.2);
+}
+.category-tag .remove {
+  cursor: pointer; font-size: 14px; opacity: 0.6;
+  transition: opacity 0.2s;
+}
+.category-tag .remove:hover { opacity: 1; }
+.add-category-row { display: flex; gap: 8px; margin-top: 8px; }
+.add-category-row input { flex: 1; }
+.btn-small {
+  padding: 8px 16px; border-radius: 8px;
+  background: rgba(191,90,242,0.15); color: var(--accent-purple);
+  border: 1px solid rgba(191,90,242,0.3);
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-small:hover { background: rgba(191,90,242,0.25); }
+
+/* Submit */
+.submit-row { display: flex; gap: 12px; margin-top: 32px; }
+.btn-primary {
+  padding: 12px 28px; border-radius: 12px;
+  background: var(--accent-blue); color: white;
+  border: none; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+  letter-spacing: -0.2px;
+}
+.btn-primary:hover { background: #0070e0; transform: scale(1.02); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn-secondary {
+  padding: 12px 28px; border-radius: 12px;
+  background: rgba(255,255,255,0.04); color: var(--text-secondary);
+  border: 1px solid var(--surface-border);
+  font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: all 0.2s; text-decoration: none;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+
+/* Result */
+.result-panel {
+  margin-top: 24px; padding: 20px; border-radius: var(--radius);
+  border: 1px solid var(--surface-border);
+  display: none;
+}
+.result-panel.success {
+  display: block;
+  background: rgba(48,209,88,0.08);
+  border-color: rgba(48,209,88,0.2);
+}
+.result-panel.error {
+  display: block;
+  background: rgba(255,69,58,0.08);
+  border-color: rgba(255,69,58,0.2);
+}
+.result-panel h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+.result-panel.success h3 { color: var(--accent-green); }
+.result-panel.error h3 { color: var(--accent-red); }
+.result-panel p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+.result-panel ul { padding-left: 18px; margin-top: 8px; }
+.result-panel li { font-size: 13px; color: var(--text-secondary); margin: 4px 0; }
+.result-panel code {
+  background: rgba(255,255,255,0.04); padding: 2px 6px; border-radius: 4px;
+  font-size: 11px; font-family: "SF Mono", monospace; color: var(--accent-teal);
+}
+
+/* Existing stacks */
+.stacks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 32px; }
+.stack-card {
+  padding: 16px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--surface-border);
+}
+.stack-card .name { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+.stack-card .meta { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
+.stack-card .badge {
+  display: inline-block; margin-top: 8px;
+  padding: 3px 8px; border-radius: 12px;
+  font-size: 10px; font-weight: 500;
+  background: rgba(48,209,88,0.12); color: var(--accent-green);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <span class="header-logo">MCP Init MS</span>
+    <span class="header-subtitle">Admin: Gestionar Stacks</span>
+  </div>
+  <div>
+    <a href="/" class="nav-link">Visualizador</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="form-container">
+    <h1>Agregar Nuevo Stack</h1>
+    <p class="subtitle">
+      Registra un nuevo stack tecnologico para el MCP. Se creara la estructura base de templates,
+      un generator placeholder y el blueprint inicial. Despues de crearlo, completa los templates
+      Jinja2 y la logica del generator para que sea funcional.
+    </p>
+
+    <!-- Existing stacks -->
+    <div id="existing-stacks"></div>
+
+    <!-- Form -->
+    <form id="new-stack-form" onsubmit="submitForm(event)">
+      <div class="form-section">
+        <h2>Identidad del Stack</h2>
+        <div class="form-row">
+          <label for="stack_id">Stack ID</label>
+          <input type="text" id="stack_id" name="stack_id" placeholder="python-fastapi" required>
+          <div class="hint">Lowercase con guiones. Sera el nombre del directorio en templates/</div>
+        </div>
+        <div class="form-row">
+          <label for="stack_name">Nombre del Stack</label>
+          <input type="text" id="stack_name" name="stack_name" placeholder="Python FastAPI" required>
+          <div class="hint">Nombre legible para humanos (se usa en la UI y documentacion)</div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Runtime y Version</h2>
+        <div class="form-row">
+          <label for="runtime">Runtime</label>
+          <select id="runtime" name="runtime" required>
+            <option value="">Seleccionar...</option>
+            <option value="Java">Java (JDK)</option>
+            <option value="Python">Python</option>
+            <option value="Node.js">Node.js</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="min_version">Version Minima</label>
+          <input type="text" id="min_version" name="min_version" placeholder="3.12" required>
+          <div class="hint">Version minima soportada del runtime (ej: 21, 3.12, 20)</div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Descripcion</h2>
+        <div class="form-row">
+          <label for="description">Descripcion del Stack</label>
+          <textarea id="description" name="description" placeholder="APIs REST de alto rendimiento con FastAPI, SQLAlchemy, Alembic y pytest. Incluye Docker Compose con PostgreSQL y LocalStack." required></textarea>
+          <div class="hint">Describe el caso de uso, frameworks principales y que incluye el arquetipo generado</div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Categorias de Templates</h2>
+        <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;">
+          Define las carpetas que contendran templates Jinja2. Se crearan como subdirectorios dentro de templates/&lt;stack-id&gt;/
+        </p>
+        <div class="categories-list" id="categories-list"></div>
+        <div class="add-category-row">
+          <input type="text" id="new-category" placeholder="ej: src, infra, cicd, docs, kiro">
+          <button type="button" class="btn-small" onclick="addCategory()">Agregar</button>
+        </div>
+      </div>
+
+      <div class="submit-row">
+        <button type="submit" class="btn-primary" id="submit-btn">Crear Stack</button>
+        <a href="/" class="btn-secondary">Cancelar</a>
+      </div>
+    </form>
+
+    <div class="result-panel" id="result-panel">
+      <h3 id="result-title"></h3>
+      <p id="result-message"></p>
+      <ul id="result-steps"></ul>
+    </div>
+  </div>
+</div>
+
+<script>
+let categories = ['src', 'docs', 'cicd', 'git', 'kiro', 'infra'];
+
+function renderCategories() {
+  const list = document.getElementById('categories-list');
+  list.innerHTML = categories.map(c =>
+    `<span class="category-tag">${c}<span class="remove" onclick="removeCategory('${c}')">&times;</span></span>`
+  ).join('');
+}
+
+function addCategory() {
+  const input = document.getElementById('new-category');
+  const value = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  if (value && !categories.includes(value)) {
+    categories.push(value);
+    renderCategories();
+  }
+  input.value = '';
+}
+
+function removeCategory(name) {
+  categories = categories.filter(c => c !== name);
+  renderCategories();
+}
+
+async function loadStacks() {
+  try {
+    const res = await fetch('/api/stacks');
+    const data = await res.json();
+    const container = document.getElementById('existing-stacks');
+    if (data.stacks && data.stacks.length > 0) {
+      let html = '<h2 style="font-size:14px;font-weight:500;margin-bottom:12px;color:var(--text-secondary)">Stacks Existentes</h2>';
+      html += '<div class="stacks-grid">';
+      for (const s of data.stacks) {
+        html += `<div class="stack-card">
+          <div class="name">${s.name}</div>
+          <div class="meta">${s.template_count} templates</div>
+          <span class="badge">${s.id}</span>
+        </div>`;
+      }
+      html += '</div>';
+      container.innerHTML = html;
+    }
+  } catch (e) {
+    console.error('Error loading stacks:', e);
+  }
+}
+
+async function submitForm(event) {
+  event.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Creando...';
+
+  const body = {
+    stack_id: document.getElementById('stack_id').value.trim(),
+    stack_name: document.getElementById('stack_name').value.trim(),
+    runtime: document.getElementById('runtime').value,
+    min_version: document.getElementById('min_version').value.trim(),
+    description: document.getElementById('description').value.trim(),
+    categories: categories,
+  };
+
+  try {
+    const res = await fetch('/api/stacks/new', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    const panel = document.getElementById('result-panel');
+    const title = document.getElementById('result-title');
+    const message = document.getElementById('result-message');
+    const steps = document.getElementById('result-steps');
+
+    panel.className = 'result-panel';
+
+    if (data.status === 'success') {
+      panel.classList.add('success');
+      title.textContent = 'Stack creado exitosamente';
+      message.textContent = data.message;
+      steps.innerHTML = (data.next_steps || []).map(s => `<li>${s}</li>`).join('');
+      loadStacks(); // Refresh
+    } else {
+      panel.classList.add('error');
+      title.textContent = 'Error';
+      message.textContent = data.message;
+      steps.innerHTML = '';
+    }
+  } catch (e) {
+    const panel = document.getElementById('result-panel');
+    panel.className = 'result-panel error';
+    document.getElementById('result-title').textContent = 'Error de conexion';
+    document.getElementById('result-message').textContent = e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Crear Stack';
+  }
+}
+
+// Key shortcut for add category
+document.getElementById('new-category').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); addCategory(); }
+});
+
+// Init
+renderCategories();
+loadStacks();
+loadGuidelines();
+
+async function loadGuidelines() {
+  try {
+    const res = await fetch('/api/guidelines/status');
+    const data = await res.json();
+    if (data.guidelines && data.guidelines.length > 0) {
+      const container = document.getElementById('existing-stacks');
+      let html = container.innerHTML;
+      html += '<h2 style="font-size:14px;font-weight:500;margin:24px 0 12px;color:var(--text-secondary)">Lineamientos Ingresados</h2>';
+      html += '<div class="stacks-grid">';
+      for (const g of data.guidelines) {
+        const status = g.has_applied ? 'Aplicado' : 'Pendiente';
+        const statusColor = g.has_applied ? 'var(--accent-green)' : 'var(--accent-orange)';
+        html += `<div class="stack-card">
+          <div class="name">${g.stack_id}</div>
+          <div class="meta">${g.source_filename || 'documento'} &middot; ${g.ingestion_count || 1} version(es)</div>
+          <span class="badge" style="background:${g.has_applied ? 'rgba(48,209,88,0.12)' : 'rgba(255,159,10,0.12)'};color:${statusColor}">${status}</span>
+          ${g.has_applied ? `<div class="meta" style="margin-top:4px">${g.categories_count} categorias &middot; ${g.total_rules} reglas</div>` : ''}
+        </div>`;
+      }
+      html += '</div>';
+      container.innerHTML = html;
+    }
+  } catch (e) {
+    console.error('Error loading guidelines:', e);
+  }
+}
+</script>
+</body>
+</html>

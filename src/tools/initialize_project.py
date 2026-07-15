@@ -2,23 +2,32 @@
 
 import logging
 from pathlib import Path
+from typing import Optional
 
 from src.generators.java_spring_boot import JavaSpringBootGenerator
 from src.models.project_config import ProjectConfig
+from src.utils.settings import get_output_directory
 
 logger = logging.getLogger("mcp_init_ms.tools.initialize_project")
 
 
-def handle_initialize_project(config_dict: dict, target_path: str) -> dict:
+def handle_initialize_project(config_dict: dict, target_path: Optional[str] = None) -> dict:
     """Genera todos los archivos del proyecto en el path indicado.
+
+    Si target_path no se proporciona, usa el directorio configurado
+    con set_output_directory (o /repos como ultimo fallback).
 
     Args:
         config_dict: Configuracion completa del proyecto.
-        target_path: Ruta base donde se genera (ej: /workspace).
+        target_path: Ruta base donde se genera. Si es None, usa el configurado.
 
     Returns:
         Resultado con status, archivos creados y next steps.
     """
+    if not target_path:
+        target_path = get_output_directory()
+        logger.info("Usando output directory configurado: %s", target_path)
+
     try:
         config = ProjectConfig(**config_dict)
     except Exception as e:
@@ -40,6 +49,18 @@ def handle_initialize_project(config_dict: dict, target_path: str) -> dict:
         created_files = generator.generate()
 
         logger.info("Proyecto '%s' generado: %d archivos en %s", config.project_name, len(created_files), project_root)
+
+        # Actualizar estado del visualizador
+        try:
+            from src.engine.visualizer import update_project_state, _build_tree
+            update_project_state({
+                "status": "ok",
+                "project_name": config.project_name,
+                "config": config.model_dump(mode="json"),
+                "tree": _build_tree(project_root, max_depth=4),
+            })
+        except Exception:
+            pass  # Visualizer es opcional, no bloquea la generacion
 
         return {
             "status": "success",

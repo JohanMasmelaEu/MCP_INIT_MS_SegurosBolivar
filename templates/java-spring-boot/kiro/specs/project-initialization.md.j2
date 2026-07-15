@@ -1,0 +1,50 @@
+## Feature: Inicializacion de {{ config.project_name }}
+
+### Requirements
+- Microservicio Java 21 / Spring Boot 4.x con Gradle 9.x
+{%- for module in config.modules %}
+- Modulo de dominio: {{ module.module_name }} (entidad {{ module.entity_name }}, tabla {{ module.table_name }}{% if module.fields %}, {{ module.fields | length }} campos{% endif %})
+{%- endfor %}
+- Base de datos: PostgreSQL (nombre: {{ config.database.db_name }}, schema: {{ config.database.db_schema }})
+- Autenticacion: {{ config.auth_strategy }}
+{%- if config.integrations.uses_s3 %}
+- Integracion AWS S3 (almacenamiento de archivos, presigned URLs)
+{%- endif %}
+{%- if config.integrations.uses_sqs %}
+- Integracion AWS SQS (colas de mensajes asincrono)
+{%- endif %}
+{%- if config.integrations.uses_soap %}
+- Integracion SOAP/WS (servicios legacy)
+{%- endif %}
+{%- for svc in config.integrations.external_http_services %}
+- Servicio HTTP externo: {{ svc.name }} ({{ svc.description }})
+{%- endfor %}
+- Observabilidad: Datadog Agent {% if config.observability.datadog_enabled %}habilitado{% else %}deshabilitado{% endif %}
+
+### Design
+- Estructura domain-driven: controller/dto/services/repository por modulo
+- Docker Compose local: PostgreSQL + LocalStack (SSM{% if config.integrations.uses_s3 %}/S3{% endif %}{% if config.integrations.uses_sqs %}/SQS{% endif %}) + Mock OAuth + Datadog Agent no-forward
+- CI/CD: GitHub Actions con templates institucionales (PR validation + pipeline deploy)
+- Security: Spring Security ({{ config.auth_strategy }}) + SecurityHeaders + Sanitizacion XSS
+- API: SpringDoc OpenAPI 3.x + Swagger UI en {{ config.context_path }}/swagger-ui.html
+- Paquete base: {{ config.base_package }}
+- Context path: {{ config.context_path }}
+
+### Tasks
+- [x] Generar estructura base del proyecto (Gradle, Application class, configuraciones)
+- [x] Configurar Docker Compose local (PostgreSQL, LocalStack, MockOAuth, Datadog)
+- [x] Generar seed-localstack-ssm.sh con parametros SSM
+{%- for module in config.modules %}
+- [x] Generar modulo de dominio: {{ module.module_name }} (Controller, DTOs, Service, Repository, Entity, Tests)
+{%- endfor %}
+- [x] Configurar CI/CD (GitHub Actions pull-request.yml + pipeline.yaml)
+- [x] Generar documentacion (README, api_spec.yaml, .env.sample)
+- [x] Configurar .kiro (steering, hooks, changelogs, MCP servers)
+- [ ] Implementar logica de negocio en ServiceImpl de cada modulo
+- [ ] Configurar variables de entorno reales (copiar .env.sample a .env)
+- [ ] Levantar entorno local: docker compose up -d
+- [ ] Validar health check: GET {{ config.context_path }}/actuator/health
+- [ ] Validar Swagger UI: GET {{ config.context_path }}/swagger-ui.html
+- [ ] Ejecutar tests: ./gradlew test
+- [ ] Configurar credenciales JFrog Artifactory (ARTIFACTORY_USER, ARTIFACTORY_PASSWORD)
+- [ ] Primer commit y push al repositorio

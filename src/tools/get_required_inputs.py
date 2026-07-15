@@ -25,6 +25,7 @@ def handle_get_required_inputs(stack: str) -> dict:
             _integrations_category(),
             _observability_category(),
             _artifactory_category(),
+            _mcp_marketplace_category(),
         ],
     }
 
@@ -314,6 +315,77 @@ def _artifactory_category() -> dict:
                 "type": "string",
                 "default": "https://segurosbolivar.jfrog.io/artifactory",
                 "description": "URL institucional. No cambiar a menos que sea un entorno diferente.",
+            },
+        ],
+    }
+
+
+def _mcp_marketplace_category() -> dict:
+    """Categoria: MCP Marketplace — seleccion de MCP servers para el proyecto."""
+    return {
+        "name": "mcp_marketplace",
+        "label": "MCP Marketplace (Servidores de Kiro)",
+        "description": (
+            "Selecciona los MCP Servers que deseas tener pre-configurados en el proyecto generado. "
+            "Cada MCP agrega capacidades especificas a Kiro dentro del contexto del proyecto. "
+            "El proyecto generado incluira .kiro/settings/mcp.json con los seleccionados listos para usar."
+        ),
+        "fields": [
+            {
+                "key": "selected_mcps",
+                "label": "MCP Servers a incluir",
+                "type": "array",
+                "required": False,
+                "description": "Lista de IDs de MCPs seleccionados del catalogo. Si no se indica, se incluye MCP_INIT por defecto.",
+                "catalog": [
+                    {
+                        "id": "MCP_INIT_MS_SegurosBolivar",
+                        "name": "MCP Inicializador de Microservicios",
+                        "auto_include": True,
+                        "description": (
+                            "Permite extender el proyecto desde Kiro: agregar modulos de dominio (CRUD completo), "
+                            "reconfigurar infraestructura (docker-compose, SSM, .env), consultar el blueprint "
+                            "tecnico del stack y ver el arquetipo visual del proyecto en localhost:9752."
+                        ),
+                        "capabilities": [
+                            "add_domain_module: Agrega entidades CRUD completas sin salir del chat",
+                            "configure_infrastructure: Modifica docker-compose, SSM params y variables",
+                            "get_blueprint: Consulta el blueprint tecnico como contexto para Kiro",
+                            "set_output_directory: Configura donde se generan nuevos proyectos",
+                        ],
+                        "docker_args": [
+                            "run", "-i", "--rm",
+                            "-v", "C:/REPOS:/repos",
+                            "-v", "mcp-init-settings:/settings",
+                            "-p", "9752:9752",
+                            "ghcr.io/johanmasmelaeu/mcp-init-ms-segurosbolivar:latest",
+                        ],
+                    },
+                    {
+                        "id": "MCP_HU_SegurosBolivar",
+                        "name": "MCP Historias de Usuario",
+                        "auto_include": False,
+                        "description": (
+                            "Panel de 10 expertos para analisis de Historias de Usuario. Detecta gaps, "
+                            "ambiguedades y contradicciones. Memoria contextual que aprende del proyecto. "
+                            "Estimacion adaptativa con calibracion por velocidad real del equipo. "
+                            "Visibilidad transversal entre apps del ecosistema. Grafo visual en localhost:9751."
+                        ),
+                        "capabilities": [
+                            "analyze_story: Analiza una HU con 10 expertos (negocio, UX, backend, seguridad, etc.)",
+                            "detect_conflicts: Encuentra duplicaciones y contradicciones entre HUs",
+                            "estimate_story: Estima esfuerzo optimista/probable/pesimista con confianza",
+                            "suggest_next_stories: Sugiere HUs faltantes basado en flujos incompletos",
+                            "get_cross_app_context: Contexto transversal desde otras apps del ecosistema",
+                        ],
+                        "docker_args": [
+                            "run", "-i", "--rm",
+                            "-v", "mcp-hu-memory:/workspace",
+                            "-p", "9751:9751",
+                            "ghcr.io/johanmasmelaeu/mcp-hu-segurosbolivar:latest",
+                        ],
+                    },
+                ],
             },
         ],
     }

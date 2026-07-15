@@ -17,6 +17,12 @@ from src.tools.initialize_project import handle_initialize_project
 from src.tools.add_domain_module import handle_add_domain_module
 from src.tools.configure_infrastructure import handle_configure_infrastructure
 from src.tools.get_blueprint import handle_get_blueprint
+from src.tools.set_output_directory import handle_set_output_directory
+from src.tools.stack_guidelines import (
+    handle_ingest_stack_guidelines,
+    handle_get_stack_guidelines,
+    handle_apply_stack_guidelines,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("mcp_init_ms")
@@ -76,19 +82,22 @@ async def get_project_plan(config: str) -> str:
 
 
 @mcp.tool()
-async def initialize_project(config: str, target_path: str = "/workspace") -> str:
+async def initialize_project(config: str, target_path: str = "") -> str:
     """Genera el proyecto completo en disco. SOLO llamar despues de confirmacion del usuario.
 
     Renderiza todos los templates Jinja2 con los datos del usuario y escribe
     los archivos en el path indicado. El proyecto generado esta listo para
     hacer docker compose up y tener un MS funcional en local.
 
+    Si target_path esta vacio, usa el directorio configurado con set_output_directory.
+    Si no se ha configurado ningun directorio, usa /repos como fallback.
+
     Args:
         config: JSON string con la configuracion completa del proyecto.
-        target_path: Ruta base donde se genera el proyecto (default: /workspace).
+        target_path: Ruta base donde se genera el proyecto. Dejar vacio para usar el configurado.
     """
     config_dict = json.loads(config)
-    result = handle_initialize_project(config_dict, target_path)
+    result = handle_initialize_project(config_dict, target_path or None)
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -139,6 +148,86 @@ async def get_blueprint(stack: str) -> str:
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
+@mcp.tool()
+async def set_output_directory(path: str) -> str:
+    """Configura el directorio base donde se generan los proyectos.
+
+    Una vez configurado, todas las llamadas a initialize_project usaran
+    este directorio como default sin necesidad de pasar target_path.
+    La configuracion se persiste entre sesiones.
+
+    Ejemplo de uso: el usuario dice "genera mis proyectos en C:/REPOS/SegurosBolivar"
+    y a partir de ahi todos los proyectos se crean en esa carpeta.
+
+    Args:
+        path: Ruta absoluta del directorio de salida (ej: "/repos", "C:/REPOS/MiEquipo").
+    """
+    result = handle_set_output_directory(path)
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+async def ingest_stack_guidelines(stack_id: str, raw_content: str, source_filename: str = "") -> str:
+    """Persiste el contenido de un documento de lineamientos para un stack tecnologico.
+
+    Flujo completo:
+    1. El usuario adjunta un PDF/documento con lineamientos en el chat de Kiro.
+    2. Kiro (LLM) extrae el texto del documento adjunto.
+    3. Kiro invoca este tool para persistir el contenido crudo.
+    4. Kiro analiza el contenido con su LLM y genera un resumen estructurado.
+    5. Kiro muestra al usuario: "Asi entendi los lineamientos: ..."
+    6. El usuario refina hasta aprobar.
+    7. Kiro invoca apply_stack_guidelines con el resultado aprobado.
+
+    Args:
+        stack_id: Identificador del stack (ej: "java-spring-boot", "python-fastapi").
+        raw_content: Texto completo extraido del documento PDF/Word.
+        source_filename: Nombre original del archivo fuente (ej: "Lineamientos_Java_2024.pdf").
+    """
+    result = handle_ingest_stack_guidelines(stack_id, raw_content, source_filename)
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+async def get_stack_guidelines(stack_id: str, version: str = "latest") -> str:
+    """Obtiene los lineamientos almacenados para un stack tecnologico.
+
+    Usa este tool para recuperar el contenido de lineamientos previamente
+    ingresados y analizarlos con tu LLM para generar estandares estructurados.
+
+    Args:
+        stack_id: Identificador del stack (ej: "java-spring-boot").
+        version: "latest" o "raw" para el contenido crudo, "applied" para los ya aprobados.
+    """
+    result = handle_get_stack_guidelines(stack_id, version)
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+async def apply_stack_guidelines(stack_id: str, refined_guidelines: str, update_blueprint: bool = True, replace_existing: bool = False) -> str:
+    """Persiste los lineamientos refinados como documentacion oficial del stack.
+
+    Invocar SOLO despues de que el usuario haya aprobado el analisis generado
+    por Kiro. Los lineamientos aprobados se convierten en la referencia oficial
+    del stack y se muestran en el Archetype Visualizer (tab Estandares).
+
+    Opcionalmente actualiza el blueprint tecnico del stack en blueprints/.
+
+    Args:
+        refined_guidelines: JSON string con los estandares aprobados. Formato:
+            {"stack_name": "...", "categories": [{"name": "...", "rules": [{"rule": "...", "convention": "...", "example": "..."}]}]}
+        stack_id: Identificador del stack.
+        update_blueprint: Si True, genera/actualiza el blueprint .md del stack.
+        replace_existing: Si True, reemplaza guidelines existentes. Si False, mergea con los anteriores.
+    """
+    guidelines_dict = json.loads(refined_guidelines) if isinstance(refined_guidelines, str) else refined_guidelines
+    result = handle_apply_stack_guidelines(stack_id, guidelines_dict, update_blueprint, replace_existing)
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
 if __name__ == "__main__":
     logger.info("Iniciando MCP_INIT_MS_SegurosBolivar v1.0.0 (stdio)")
+    # Arrancar visualizador de arquetipo en background (puerto 9752)
+    from src.engine.visualizer import start_visualizer
+    start_visualizer()
     mcp.run(transport="stdio")

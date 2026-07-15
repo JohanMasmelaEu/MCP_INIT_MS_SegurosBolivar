@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Compilar al guardar archivo Java",
+      "trigger": "PostFileSave",
+      "matcher": "\\.java$",
+      "action": {
+        "type": "command",
+        "command": "./gradlew compileJava --daemon -q"
+      }
+    }
+  ]
+}

@@ -17,6 +17,7 @@ logger = logging.getLogger("mcp_init_ms.generators.java_spring_boot")
 
 STACK_ID = "java-spring-boot"
 RULES_DIR = Path(__file__).resolve().parent.parent.parent / "rules"
+TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "templates"
 
 
 class JavaSpringBootGenerator(BaseGenerator):
@@ -322,7 +323,7 @@ class JavaSpringBootGenerator(BaseGenerator):
         self._render_write("docs/api_spec.yaml.j2", "api_spec.yaml")
 
     def _generate_kiro_context(self) -> None:
-        """Genera archivos de contexto .kiro/ (steering, changelogs)."""
+        """Genera archivos de contexto .kiro/ (steering, changelogs, hooks, mcp, specs)."""
         self._render_write("kiro/api-context.md.j2", ".kiro/steering/api-context.md")
         self._render_write("kiro/changelog-develop.md.j2", ".kiro/changelogs/changelog-develop.md")
 
@@ -331,6 +332,57 @@ class JavaSpringBootGenerator(BaseGenerator):
             for rule_file in RULES_DIR.glob("*.md"):
                 content = rule_file.read_text(encoding="utf-8")
                 self.writer.write(f".kiro/steering/{rule_file.name}", content)
+
+        # Generar hooks por stack
+        self._generate_kiro_hooks()
+
+        # Generar .kiro/settings/mcp.json con MCPs seleccionados del marketplace
+        self._generate_kiro_mcp_settings()
+
+        # Generar spec inicial del proyecto
+        self._generate_kiro_specs()
+
+    def _generate_kiro_hooks(self) -> None:
+        """Genera hooks de Kiro segun el stack (archivos .kiro/hooks/*.json)."""
+        hooks_template_dir = TEMPLATES_DIR / "java-spring-boot" / "kiro" / "hooks"
+        if not hooks_template_dir.exists():
+            return
+
+        for hook_template in hooks_template_dir.glob("*.json.j2"):
+            hook_name = hook_template.stem  # ej: compile-on-save.json
+            content = self.renderer.render(f"kiro/hooks/{hook_template.name}", self.ctx)
+            self.writer.write(f".kiro/hooks/{hook_name}", content)
+
+    def _generate_kiro_mcp_settings(self) -> None:
+        """Genera .kiro/settings/mcp.json con los MCPs seleccionados del marketplace."""
+        selected = self.config.selected_mcps
+
+        # Si no se selecciono nada, incluir MCP_INIT por defecto
+        if not selected:
+            selected = [
+                {
+                    "id": "MCP_INIT_MS_SegurosBolivar",
+                    "docker_args": [
+                        "run", "-i", "--rm",
+                        "-v", "C:/REPOS:/repos",
+                        "-v", "mcp-init-settings:/settings",
+                        "-p", "9752:9752",
+                        "ghcr.io/johanmasmelaeu/mcp-init-ms-segurosbolivar:latest",
+                    ],
+                }
+            ]
+        else:
+            selected = [m.model_dump() for m in selected]
+
+        ctx = {**self.ctx, "selected_mcps": selected}
+        content = self.renderer.render("kiro/mcp-settings.json.j2", ctx)
+        self.writer.write(".kiro/settings/mcp.json", content)
+
+    def _generate_kiro_specs(self) -> None:
+        """Genera spec inicial del proyecto basado en la configuracion."""
+        ctx = {**self.ctx, "config": self.config}
+        content = self.renderer.render("kiro/specs/project-initialization.md.j2", ctx)
+        self.writer.write(".kiro/specs/project-initialization.md", content)
 
     def _generate_integrations(self) -> None:
         """Genera configuraciones de integraciones opcionales."""

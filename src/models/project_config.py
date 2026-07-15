@@ -130,6 +130,16 @@ class ObservabilityConfig(BaseModel):
     )
 
 
+class McpServerSelection(BaseModel):
+    """Seleccion de un MCP Server del marketplace para incluir en el proyecto."""
+
+    id: str = Field(description="Identificador unico del MCP Server (ej: MCP_INIT_MS_SegurosBolivar)")
+    docker_args: list[str] = Field(
+        default_factory=list,
+        description="Args de Docker para el MCP Server (se usan en .kiro/settings/mcp.json)",
+    )
+
+
 class ProjectConfig(BaseModel):
     """Configuracion completa del proyecto a generar.
 
@@ -185,6 +195,12 @@ class ProjectConfig(BaseModel):
     artifactory_url: str = Field(
         default="https://segurosbolivar.jfrog.io/artifactory",
         description="URL base de JFrog Artifactory",
+    )
+
+    # --- MCP Servers (Marketplace) ---
+    selected_mcps: list[McpServerSelection] = Field(
+        default_factory=list,
+        description="MCP Servers seleccionados del marketplace para incluir en .kiro/settings/mcp.json",
     )
 
     @field_validator("project_name")
