@@ -1,0 +1,8 @@
+{
+  "stack": "java",
+  "dockerProfile": {{ (c.docker_profile or "java-standard") | tojson }},
+  "cache": {{ (c.cache or "none") | tojson }},
+  "i18n": {{ c.i18n | tojson }},
+  "generatedBy": "mcp-init-ms-segurosbolivar",
+  "createdAt": "{{ now_iso }}"
+}

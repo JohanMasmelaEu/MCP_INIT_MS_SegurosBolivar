@@ -1,0 +1,35 @@
+---
+inclusion: always
+---
+# Acceso a Datos
+
+> Generado por MCP_INIT_MS_SegurosBolivar. No editar manualmente.
+
+## ORM obligatorio
+
+| Stack | ORM | Alternativa aprobada |
+|-------|-----|---------------------|
+| Java | Spring Data JPA + Specification | JPQL con @Query parametrizado |
+| Python | SQLAlchemy 2.x | Tortoise ORM |
+| Node | pg con query parametrizado | - |
+
+## Prohibido (salvo confirmación explícita del usuario)
+
+- String concatenation para SQL
+- Queries dentro de loops (N+1)
+- `.findAll()` sin paginación
+- Consultas cíclicas
+- Scripts SQL como strings
+
+## Obligatorio
+
+- Repositories tipados con métodos declarativos
+- Specification/filtros dinámicos
+- Paginación SIEMPRE en listados
+- JOIN FETCH para evitar N+1
+- Índices documentados
+- Queries parametrizados si SQL custom
+
+## SQL raw — escape hatch
+
+Solo con confirmación explícita del usuario + justificación + SIEMPRE parametrizado. El agente debe preguntar primero si puede resolverse con el ORM.

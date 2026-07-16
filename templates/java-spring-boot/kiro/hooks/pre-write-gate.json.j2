@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Pre-write Gate — Plan + Arquitectura + Calidad",
+      "trigger": "PreToolUse",
+      "matcher": "fs_write|str_replace|fs_append",
+      "action": {
+        "type": "agent",
+        "prompt": "Antes de escribir este codigo, evalua:\n\n1. PLAN: Declara en 1-2 lineas que vas a hacer (plan ligero). Si el cambio cumple alguna de estas condiciones: (a) diff > 15 lineas, (b) mas de 1 archivo tocado, (c) toca dto/, schema/, model, config/, auth/ — entonces presenta plan COMPLETO (archivos, logica, tests, errores posibles) y ESPERA confirmacion del usuario.\n\n2. ARQUITECTURA: Verifica que lo que vas a implementar es consistente con la estructura del proyecto existente (organizacion por dominio, patrones, naming). Si vas a divergir, DETENTE y pregunta.\n\n3. SCOPE: Verifica que agregas SOLO lo que el usuario pidio. No extras, no features bonus, no refactorizaciones no solicitadas.\n\nSi ya se aprobo un plan para este modulo en la sesion actual, no re-preguntar."
+      }
+    }
+  ]
+}

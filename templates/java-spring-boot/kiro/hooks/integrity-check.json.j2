@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Verificacion de integridad al inicio de sesion",
+      "trigger": "SessionStart",
+      "action": {
+        "type": "agent",
+        "prompt": "Inicio de sesion. Verifica que los hooks criticos del proyecto existen:\n- .kiro/hooks/pre-write-gate.json\n- .kiro/hooks/responsible-use.json\n\nSi alguno falta, informa al usuario: '⚠️ Hook [nombre] no esta activo. Los cambios no pasaran por confirmacion automatica — operando en modo degradado.'\n\nNo bloquees la sesion. Solo informa y continua. Aplica las reglas de los steering files como fallback de autoevaluacion."
+      }
+    }
+  ]
+}

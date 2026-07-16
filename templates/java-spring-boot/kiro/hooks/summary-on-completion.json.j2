@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Resumen al finalizar sesion",
+      "trigger": "Stop",
+      "action": {
+        "type": "agent",
+        "prompt": "Sesion finalizada. Presenta al usuario:\n1. Resumen de archivos creados/modificados en esta sesion\n2. Si hubo cambios significativos, sugiere ejecutar el Trash Inspector\n3. Pide validacion: '¿Los cambios son correctos? ¿Hay algo que ajustar antes de cerrar?'"
+      }
+    }
+  ]
+}

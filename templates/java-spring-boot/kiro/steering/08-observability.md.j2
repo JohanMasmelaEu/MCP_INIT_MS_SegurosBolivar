@@ -1,0 +1,43 @@
+---
+inclusion: always
+---
+# Observabilidad
+
+> Generado por MCP_INIT_MS_SegurosBolivar. No editar manualmente.
+
+> **Nota de alcance:** Este documento aplica a la plantilla Java/Spring. Para Python/FastAPI y Node/Express, se definirá un steering equivalente al crear esas plantillas, siguiendo el mismo contrato (health check, logs estructurados, métricas) con herramientas nativas de cada stack.
+
+## Por ambiente
+
+| Ambiente | Nivel | Formato | Masking | Detalle |
+|----------|-------|---------|---------|---------|
+| **Local** | DEBUG | Consola legible | OFF | Payloads completos, stack traces, queries |
+| **Productivo** | INFO | JSON estructurado | ON | Campos sensibles ofuscados, correlation-ID |
+| **Soporte** | Dinámico (Actuator) | JSON | ON | Tramas en Datadog con permisos, sin redespliegue |
+
+## Correlation ID
+
+- Obligatorio en toda request
+- Se lee de `X-Correlation-ID` o se genera UUID si no viene
+- Se inyecta en MDC/context
+- Se propaga a downstream
+
+## Masking (solo prod)
+
+Campos: documento, numeroTarjeta, password, token, email, telefono → `****XXXX`.
+Configuración por perfil: OFF en local, ON en prod.
+
+## Niveles
+
+- ERROR: fallo que requiere atención
+- WARN: anómala recuperable
+- INFO: eventos de negocio
+- DEBUG: detalle técnico (solo local o temporal via Actuator)
+
+## Prohibido
+
+Loguear passwords/tokens/secrets (ni en local). Stack traces al cliente. Logs sin correlation_id.
+
+## Contrato cross-stack (principio general)
+
+Todo servicio debe exponer: health check, logs estructurados, métricas. Cómo se logra es específico de cada plantilla.

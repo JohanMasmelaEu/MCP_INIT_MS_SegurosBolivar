@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Validacion de prompt — accion + objeto",
+      "trigger": "UserPromptSubmit",
+      "action": {
+        "type": "agent",
+        "prompt": "Evalua si el prompt del usuario contiene: (a) una accion reconocible (crear, agregar, corregir, refactorizar, eliminar, actualizar) Y (b) un objeto/entidad concreto (endpoint, servicio, DTO, dominio, campo, etc.).\n\nSi AMBOS estan presentes: procede sin preguntar nada, sin importar lo breve del prompt.\nSi FALTA alguno: pregunta especificamente que falta. No pidas 'elaborar mas' de forma generica — pregunta puntual: '¿A que dominio pertenece?' o '¿Que accion necesitas sobre ese recurso?'"
+      }
+    }
+  ]
+}

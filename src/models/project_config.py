@@ -203,6 +203,20 @@ class ProjectConfig(BaseModel):
         description="MCP Servers seleccionados del marketplace para incluir en .kiro/settings/mcp.json",
     )
 
+    # --- Metadatos adicionales del proyecto ---
+    i18n: list[str] = Field(
+        default_factory=lambda: ["es"],
+        description="Idiomas activos para mensajes (es, en). Default solo español.",
+    )
+    cache: Optional[str] = Field(
+        default=None,
+        description="Tecnología de cache si aplica (ej: 'redis'). None = sin cache.",
+    )
+    docker_profile: Optional[str] = Field(
+        default=None,
+        description="Perfil de imagen Docker (ej: 'java-redis'). Define qué incluye la imagen.",
+    )
+
     @field_validator("project_name")
     @classmethod
     def validate_project_name_ends_with_ms(cls, v: str) -> str:

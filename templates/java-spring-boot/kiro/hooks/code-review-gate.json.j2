@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Review post-escritura",
+      "trigger": "PostToolUse",
+      "matcher": "fs_write|str_replace|fs_append",
+      "action": {
+        "type": "agent",
+        "prompt": "Codigo escrito. Recuerda al usuario verificar:\n- Naming correcto segun convenciones (Controller, Service, ServiceImpl, Request, Response)\n- Error handling presente (no dejar caminos sin captura)\n- Tests necesarios para esta implementacion\n- Consistencia con la arquitectura del proyecto\n- No hay codigo basura (imports no usados, console.log, TODO sin resolver)"
+      }
+    }
+  ]
+}

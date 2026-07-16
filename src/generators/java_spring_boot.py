@@ -195,6 +195,9 @@ class JavaSpringBootGenerator(BaseGenerator):
             "ssm_app_prefix": self.config.ssm_app_prefix,
             "artifactory_url": self.config.artifactory_url,
             "modules": self.config.modules,
+            "i18n": self.config.i18n,
+            "cache": self.config.cache,
+            "docker_profile": self.config.docker_profile,
         }
 
     def _render_write(self, template_path: str, output_path: str, context: dict | None = None) -> None:
@@ -323,35 +326,58 @@ class JavaSpringBootGenerator(BaseGenerator):
         self._render_write("docs/api_spec.yaml.j2", "api_spec.yaml")
 
     def _generate_kiro_context(self) -> None:
-        """Genera archivos de contexto .kiro/ (steering, changelogs, hooks, mcp, specs)."""
-        self._render_write("kiro/api-context.md.j2", ".kiro/steering/api-context.md")
+        """Genera archivos .kiro/ completos: project.json, steering, hooks, changelogs, mcp."""
+        from datetime import date
+
+        ctx_with_date = {**self.ctx, "now_iso": date.today().isoformat()}
+
+        # project.json
+        self._render_write("kiro/project.json.j2", ".kiro/project.json", ctx_with_date)
+
+        # Steering files
+        steering_files = [
+            "00-org-conventions",
+            "01-architecture",
+            "02-security",
+            "03-code-style",
+            "04-testing-standards",
+            "05-responsible-ai-use",
+            "06-data-access",
+            "07-error-handling",
+            "08-observability",
+            "10-stack-java",
+        ]
+        for name in steering_files:
+            self._render_write(
+                f"kiro/steering/{name}.md.j2",
+                f".kiro/steering/{name}.md",
+                ctx_with_date,
+            )
+
+        # Hooks
+        hook_files = [
+            "pre-write-gate",
+            "responsible-use",
+            "code-review-gate",
+            "test-coverage-gate",
+            "build-validate",
+            "integrity-check",
+            "summary-on-completion",
+        ]
+        for name in hook_files:
+            self._render_write(
+                f"kiro/hooks/{name}.json.j2",
+                f".kiro/hooks/{name}.json",
+            )
+
+        # Changelog
         self._render_write("kiro/changelog-develop.md.j2", ".kiro/changelogs/changelog-develop.md")
 
-        # Copiar rules transversales
-        if RULES_DIR.exists():
-            for rule_file in RULES_DIR.glob("*.md"):
-                content = rule_file.read_text(encoding="utf-8")
-                self.writer.write(f".kiro/steering/{rule_file.name}", content)
-
-        # Generar hooks por stack
-        self._generate_kiro_hooks()
-
-        # Generar .kiro/settings/mcp.json con MCPs seleccionados del marketplace
+        # MCP settings
         self._generate_kiro_mcp_settings()
 
-        # Generar spec inicial del proyecto
+        # Spec inicial
         self._generate_kiro_specs()
-
-    def _generate_kiro_hooks(self) -> None:
-        """Genera hooks de Kiro segun el stack (archivos .kiro/hooks/*.json)."""
-        hooks_template_dir = TEMPLATES_DIR / "java-spring-boot" / "kiro" / "hooks"
-        if not hooks_template_dir.exists():
-            return
-
-        for hook_template in hooks_template_dir.glob("*.json.j2"):
-            hook_name = hook_template.stem  # ej: compile-on-save.json
-            content = self.renderer.render(f"kiro/hooks/{hook_template.name}", self.ctx)
-            self.writer.write(f".kiro/hooks/{hook_name}", content)
 
     def _generate_kiro_mcp_settings(self) -> None:
         """Genera .kiro/settings/mcp.json con los MCPs seleccionados del marketplace."""

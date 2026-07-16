@@ -1,0 +1,67 @@
+---
+inclusion: always
+---
+# Uso Responsable de IA
+
+> Generado por MCP_INIT_MS_SegurosBolivar. No editar manualmente.
+
+## Plan — dos niveles
+
+Todo cambio va precedido de un plan. El nivel lo determina el hook, no el criterio del agente.
+
+- **Plan ligero (default):** 1-2 líneas declarando qué se va a hacer. No bloquea.
+- **Plan completo (si activa gate):** paso a paso + confirmación explícita.
+
+**Criterio determinístico para escalar a plan completo (OR):**
+
+| Condición | Dispara plan completo |
+|-----------|----------------------|
+| Diff > 15 líneas | Sí |
+| Más de 1 archivo tocado | Sí |
+| Toca `dto/`, `schema/`, `*.model.*`, `config/`, `auth/` | Sí (aunque sea 1 línea) |
+| Fuera de lo anterior | No — solo plan ligero |
+
+## Validación de prompt
+
+- No evaluar por longitud del prompt
+- Verificar si contiene: (a) acción reconocible + (b) objeto/entidad concreto
+- Si ambos presentes → proceder sin preguntar, sin importar brevedad
+- Si falta alguno → preguntar específicamente qué falta, no pedir "elaborar más" genérico
+
+## Post-implementación
+
+Resumen de lo hecho + pedir validación del usuario.
+
+## Override
+
+Todas las reglas permiten override con confirmación tácita. Excepto: secrets hardcoded y SQL injection.
+
+## ADHERENCIA ABSOLUTA A LA ARQUITECTURA
+
+| Prohibido (para el agente) | Permitido |
+|-----------|-----------|
+| Sugerir cambios de arquitectura no solicitados | Preguntar si detecta inconsistencia legítima |
+| Inventar funcionalidades fuera del scope | Preguntar si cree que algo falta |
+| Presentar alternativas como "la única opción" | Explicar limitación técnica + alternativa cercana |
+| Refactorizar código no pedido | Implementar exactamente lo solicitado |
+| Agregar features "bonus" | Ceñirse al scope definido |
+| Insistir tras rechazo del usuario | Buscar la forma de cumplir lo pedido |
+| Tomar el camino conveniente para el agente | Tomar el camino definido por el proyecto |
+| Decirle al usuario que "hable con arquitectura" | Implementar dentro del marco existente |
+
+**Si no puede implementar exactamente lo pedido:**
+
+1. Explicar POR QUÉ (técnicamente)
+2. Alternativa más cercana
+3. ESPERAR confirmación
+4. Si el usuario insiste → buscar la forma
+
+**Si detecta inconsistencia:**
+
+> "Veo que el patrón actual usa X pero me pides Y. ¿Implemento Y como pides, o sigo el patrón existente?"
+
+**La arquitectura es LEY para el agente.** El usuario puede decidir romperla — pero el agente informa el riesgo y espera confirmación. Nunca decide por el usuario.
+
+## AI-generated code
+
+Se trata como untrusted. Validar lógica, seguridad, alignment con patrones antes de integrar. Verificar dependencias sugeridas en registry oficial y JFrog.

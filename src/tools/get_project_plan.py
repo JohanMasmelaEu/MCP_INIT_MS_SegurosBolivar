@@ -170,7 +170,24 @@ def _build_file_tree(config: ProjectConfig) -> list[dict]:
 
     # --- Kiro context ---
     files.extend([
-        _file(f"{p}/.kiro/steering/api-context.md", "Steering: contexto del API para Kiro"),
+        _file(f"{p}/.kiro/project.json", "Metadato del proyecto: stack, cache, i18n, dockerProfile"),
+        _file(f"{p}/.kiro/steering/00-org-conventions.md", "Convenciones organizacionales: URLs, naming, idioma, docs"),
+        _file(f"{p}/.kiro/steering/01-architecture.md", "Arquitectura backend: dominios, contratos, resiliencia"),
+        _file(f"{p}/.kiro/steering/02-security.md", "Seguridad: Zero Trust, inyeccion, headers, secrets"),
+        _file(f"{p}/.kiro/steering/03-code-style.md", "Codigo limpio: SOLID, funciones, Trash Inspector"),
+        _file(f"{p}/.kiro/steering/04-testing-standards.md", "Testing: 80% coverage, Given/When/Then"),
+        _file(f"{p}/.kiro/steering/05-responsible-ai-use.md", "Uso responsable IA: plan obligatorio, adherencia arquitectura"),
+        _file(f"{p}/.kiro/steering/06-data-access.md", "Acceso datos: ORM obligatorio, no raw SQL"),
+        _file(f"{p}/.kiro/steering/07-error-handling.md", "Excepciones: cero 500, captura obligatoria"),
+        _file(f"{p}/.kiro/steering/08-observability.md", "Observabilidad: logs por ambiente, masking, correlation-id"),
+        _file(f"{p}/.kiro/steering/10-stack-java.md", "Stack Java: JDK 21, Spring Boot 4, Gradle 9"),
+        _file(f"{p}/.kiro/hooks/pre-write-gate.json", "Gate pre-escritura: plan + arquitectura + calidad"),
+        _file(f"{p}/.kiro/hooks/responsible-use.json", "Validacion prompt: accion + objeto"),
+        _file(f"{p}/.kiro/hooks/code-review-gate.json", "Review post-escritura: naming, tests, consistencia"),
+        _file(f"{p}/.kiro/hooks/test-coverage-gate.json", "Verificacion tests al completar tarea"),
+        _file(f"{p}/.kiro/hooks/build-validate.json", "Compilar al guardar .java"),
+        _file(f"{p}/.kiro/hooks/integrity-check.json", "Verificar hooks activos al iniciar sesion"),
+        _file(f"{p}/.kiro/hooks/summary-on-completion.json", "Resumen de cambios al finalizar sesion"),
         _file(f"{p}/.kiro/changelogs/changelog-develop.md", "Changelog inicial"),
     ])
 

@@ -1,0 +1,39 @@
+---
+inclusion: always
+---
+# Manejo de Excepciones
+
+> Generado por MCP_INIT_MS_SegurosBolivar. No editar manualmente.
+
+## Principio
+
+Un HTTP 500 es un bug. Toda excepción previsible debe capturarse y traducirse a un error con código y HTTP status apropiado.
+
+## Obligatorio
+
+- GlobalExceptionHandler (retorna error genérico, nunca stack trace)
+- Validación de entrada con framework del stack ANTES de la lógica
+- Excepciones de negocio custom con código semántico + HTTP status apropiado (400, 404, 409, 422)
+- Tests de caminos de error
+
+## Prohibido
+
+- `catch(Exception) { return null; }`
+- Stack traces al cliente
+- Dejar NullPointer/ClassCast/NumberFormat propagarse como 500
+- Asumir input siempre correcto
+
+## Formato error
+
+```json
+{"codigo": "CODIGO_ERROR", "mensaje": "Descripción legible", "data": null}
+```
+
+## Capas
+
+| Capa | Maneja |
+|------|--------|
+| Controller | Binding/parsing de entrada |
+| Service | Lógica → excepciones custom |
+| Repository | Errores BD → excepciones del dominio |
+| Global Handler | Red de seguridad final |

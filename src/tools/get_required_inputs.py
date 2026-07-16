@@ -26,6 +26,7 @@ def handle_get_required_inputs(stack: str) -> dict:
             _observability_category(),
             _artifactory_category(),
             _mcp_marketplace_category(),
+            _project_metadata_category(),
         ],
     }
 
@@ -386,6 +387,46 @@ def _mcp_marketplace_category() -> dict:
                         ],
                     },
                 ],
+            },
+        ],
+    }
+
+
+def _project_metadata_category() -> dict:
+    """Categoria: metadatos adicionales del proyecto."""
+    return {
+        "name": "project_metadata",
+        "label": "Metadatos del Proyecto",
+        "description": "Configuracion adicional para i18n, cache y contenedorizacion.",
+        "fields": [
+            {
+                "key": "i18n",
+                "label": "Idiomas activos para mensajes",
+                "type": "array",
+                "required": False,
+                "default": ["es"],
+                "example": ["es", "en"],
+                "description": "Idiomas para mensajes de error/validacion. Default: solo español.",
+            },
+            {
+                "key": "cache",
+                "label": "Tecnologia de cache (opcional)",
+                "type": "string",
+                "required": False,
+                "default": None,
+                "options": [
+                    {"value": "redis", "description": "Redis como cache distribuido"},
+                    {"value": None, "description": "Sin cache"},
+                ],
+            },
+            {
+                "key": "docker_profile",
+                "label": "Perfil de imagen Docker",
+                "type": "string",
+                "required": False,
+                "default": "java-standard",
+                "description": "Define que incluye la imagen Docker. Se indexa en project.json.",
+                "example": "java-redis",
             },
         ],
     }

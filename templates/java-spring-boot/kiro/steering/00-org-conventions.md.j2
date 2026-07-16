@@ -1,0 +1,103 @@
+---
+inclusion: always
+---
+# Convenciones Organizacionales — {{ project_name }}
+
+> Generado por MCP_INIT_MS_SegurosBolivar. No editar manualmente.
+
+## URLs — Estructura de nombramiento
+
+```
+host:port/[dominio]/[capa]/[version]/[funcionalidad]/[entidad]
+```
+
+| Etiqueta | Definición |
+|----------|-----------|
+| Dominio | Dominio de negocio del microservicio |
+| Capa | `api` (implementación), `composición` (orquestación de varios dominios), `lambda` (transformación con Colas/Steps Functions) |
+| Versión | Prefijo "v", enteros: v1, v2...vx. Nunca decimales |
+| Funcionalidad | Lugar donde se modifica el objeto/entidad (opcional) |
+| Entidad | Objeto que detalla la acción, en plural. Puede tener niveles de especialización |
+
+## Verbos HTTP
+
+| Verbo | Uso |
+|-------|-----|
+| GET | Consultar recursos (solo parámetros, nunca body) |
+| POST | Crear recursos o ejecutar operaciones (parámetros y/o requestBody) |
+| PUT | Actualizar recurso completo (parámetros y/o requestBody) |
+| PATCH | Actualizar parcial de un recurso (parámetros y/o requestBody) |
+| DELETE | Eliminar recursos (solo parámetros) |
+| OPTIONS | Preflight CORS / descubrir métodos permitidos en un recurso |
+
+## Naming de objetos
+
+| Objeto | Convención | Ejemplo |
+|--------|-----------|---------|
+| Controller | Nombre operación + "Controller" | `TerceroConsultableController` |
+| Service (interface) | Nombre operación + "Service" | `TerceroConsultableService` |
+| Service (impl) | Nombre operación + "ServiceImpl" | `TerceroConsultableServiceImpl` |
+| Request | Nombre operación + "Request" | `TerceroActualizarRequest` |
+| Response | Nombre operación + "Response" | `TerceroActualizarResponse` |
+| Repository (función) | "Fun" + nombre PL + "Repository" | `FunValidaCiudadRepository` |
+| Repository (procedure) | "Prc" + nombre PL + "Repository" | `PrcGenerarCertificadoRepository` |
+| Paquete operación | Funcionalidad en infinitivo + plural, minúscula, sin caracteres especiales | `consultarterceros` |
+
+## Idioma
+
+- Inglés por defecto
+- Español permitido en: nombres de objetos, nombres de métodos, paquete principal de operación, comentarios, documentación README y Swagger
+
+## Lineamientos generales
+
+- Máximo 15 operaciones por microservicio
+- Una URL identifica un recurso
+- Sustantivos en plural solamente
+- Verbos HTTP apropiados según funcionalidad
+- Formato de respuesta: JSON (Content-Type: application/json; charset=utf-8)
+- Campos opcionales como lista separada por comas
+
+## Documentación — README principal
+
+Nombre del repositorio, resumen de funcionalidades, tags, tabla de contenido, descripción, detalle de funcionalidades (lista con link al README de cada operación), arquitectura, construido con, desarrollo (instructivo local), seguridad, endpoints (DEV/STAGE/PROD), licencia.
+
+## Documentación — README por operación
+
+Título, resumen, tags, tabla de contenido, descripción (servicios que consume), detalle (verbo HTTP + path + tabla headers + request + response OK + response ERROR + notas), proyectos relacionados, endpoints por ambiente, apikeys, autores (equipo, líder técnico, arquitecto), licencia.
+
+## Backward compatibility
+
+- Ventana de deprecación default: 90 días desde que se marca deprecated hasta el sunset. Ajustable por el usuario según el caso.
+- Marcado: header `Deprecation: true` + `Sunset: <fecha ISO>` en la versión vieja, más entrada en el changelog.
+- Crear v2 no marca v1 como deprecated automáticamente — es decisión explícita y separada del usuario.
+- Rollback: dentro de la ventana de deprecación, v1 sigue operativa sin acción extra. Post-sunset, rollback vía tag de repo.
+
+> Nota: este criterio se establece como punto de partida razonable, con apertura a ajuste cuando haya más contexto de uso real.
+
+## Internacionalización (i18n) de mensajes
+
+- Default: mensajes (errores, validaciones, respuestas) en **español**.
+- Si el usuario habilita inglés (`project.json.i18n: ["es","en"]`), se homologa lo existente en español y, desde ese momento, todo mensaje nuevo se genera en **ambos idiomas activos simultáneamente** — nunca se agrega uno sin el otro si ambos están habilitados.
+- Los idiomas activos viven en `project.json.i18n`; el agente consulta ese arreglo para saber cuántas variantes generar.
+
+## Contenerización — ownership
+
+- El Dockerfile **no se genera en este repo**. Vive en un repo dedicado, sin valores quemados, y consume el package/artifact generado aquí, indexado según `project.json.dockerProfile`.
+- El perfil de imagen (stack + si incluye cache/Redis) se define en el mismo flujo de inicialización del MCP y queda registrado en `project.json.dockerProfile`.
+- La imagen ya sabe qué crear/ajustar según las variables definidas en `.env` del proyecto generado.
+
+## Cache (Redis) — opcional
+
+- Redis es seleccionable al inicializar el proyecto (`project.json.cache`). Si se activa, la imagen Docker indexada lo incluye.
+- En local, se simula con LocalStack (o equivalente) replicando el comportamiento de un ambiente ya desplegado.
+
+## Configuración por ambiente
+
+- Nombrado sigue convención estándar de industria (`application-{profile}.yml`, `.env.{env}`).
+- Alcance limitado a lo que el desarrollador necesita en local. Los valores reales de despliegue (Dev/Stage/Prod) son responsabilidad del repo `-infra` vía Terraform — este MCP no los gestiona.
+
+## Postman Collections — ownership
+
+- Este MCP no genera ni mantiene `postmanCollections/`.
+- Dicha responsabilidad corresponde a un MCP dedicado (futuro), que generará las colecciones a partir del contrato exportable (OpenAPI/JSON Schema) que este MCP sí produce.
+- Sigue siendo obligatorio a nivel de estándar del proyecto — se reubica de owner, no se elimina.
