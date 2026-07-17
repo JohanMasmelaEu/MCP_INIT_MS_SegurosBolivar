@@ -221,7 +221,7 @@ async def get_required_inputs(stack: str) -> str:
 
 
 @mcp.tool()
-async def get_project_plan(config: str) -> str:
+async def get_project_plan(config: dict) -> str:
     """Genera el plan detallado de archivos y carpetas a crear, SIN ejecutar la generacion.
 
     Kiro debe mostrar este plan al usuario y obtener confirmacion antes de
@@ -229,7 +229,8 @@ async def get_project_plan(config: str) -> str:
     tomadas y pasos siguientes.
 
     Args:
-        config: JSON string con la configuracion completa del proyecto.
+        config: JSON object con la configuracion completa del proyecto
+                (todas las respuestas del usuario segun el schema de get_required_inputs).
     """
     config_dict = _parse_config(config)
     result = handle_get_project_plan(config_dict)
@@ -237,7 +238,7 @@ async def get_project_plan(config: str) -> str:
 
 
 @mcp.tool()
-async def initialize_project(config: str, target_path: str = "") -> str:
+async def initialize_project(config: dict, target_path: str = "") -> str:
     """Genera el proyecto completo en disco. SOLO llamar despues de confirmacion del usuario.
 
     Renderiza todos los templates Jinja2 con los datos del usuario y escribe
@@ -248,7 +249,7 @@ async def initialize_project(config: str, target_path: str = "") -> str:
     Si no se ha configurado ningun directorio, usa /repos como fallback.
 
     Args:
-        config: JSON string con la configuracion completa del proyecto.
+        config: JSON object con la configuracion completa del proyecto.
         target_path: Ruta base donde se genera el proyecto. Dejar vacio para usar el configurado.
     """
     config_dict = _parse_config(config)
