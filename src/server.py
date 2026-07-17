@@ -31,6 +31,7 @@ def _parse_config(config) -> dict:
 
     Acepta:
     - str: JSON string con la config (formato esperado original).
+    - str con doble escape: cuando el LLM escapa las comillas una vez de mas.
     - dict: JSON ya parseado (cuando el LLM lo pasa como objeto directamente).
 
     Ademas, si el dict viene agrupado por categorias del schema de get_required_inputs
@@ -43,14 +44,57 @@ def _parse_config(config) -> dict:
     Returns:
         Diccionario plano compatible con ProjectConfig.
     """
-    if isinstance(config, str):
-        config_dict = json.loads(config)
-    elif isinstance(config, dict):
+    if isinstance(config, dict):
         config_dict = config
+    elif isinstance(config, str):
+        config_dict = _parse_json_string(config)
     else:
         raise ValueError(f"config debe ser str o dict, recibido: {type(config).__name__}")
 
     return _flatten_categorized_config(config_dict)
+
+
+def _parse_json_string(raw: str) -> dict:
+    """Parsea un JSON string manejando doble-escape y formatos irregulares.
+
+    El LLM a veces envia el JSON con escaped backslashes extra:
+    - Normal: {"project_name": "test"}
+    - Doble escape: {\\\"project_name\\\": \\\"test\\\"}
+
+    Args:
+        raw: String JSON potencialmente con doble escape.
+
+    Returns:
+        Diccionario parseado.
+    """
+    # Intentar parseo directo primero
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+
+    # Si falla, intentar remover un nivel de escape (\\\" → \")
+    try:
+        unescaped = raw.replace('\\"', '"')
+        # Si empieza/termina con comilla extra despues de unescape, quitarla
+        if unescaped.startswith('"') and unescaped.endswith('"'):
+            unescaped = unescaped[1:-1]
+        return json.loads(unescaped)
+    except json.JSONDecodeError:
+        pass
+
+    # Ultimo intento: doble decode (string dentro de string)
+    try:
+        inner = json.loads(raw)
+        if isinstance(inner, str):
+            return json.loads(inner)
+        return inner
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    raise ValueError(
+        f"No se pudo parsear config como JSON. Primeros 100 chars: {raw[:100]}"
+    )
 
 
 def _flatten_categorized_config(config_dict: dict) -> dict:
@@ -170,7 +214,7 @@ async def get_required_inputs(stack: str) -> str:
 
 
 @mcp.tool()
-async def get_project_plan(config: Any) -> str:
+async def get_project_plan(config: dict | str) -> str:
     """Genera el plan detallado de archivos y carpetas a crear, SIN ejecutar la generacion.
 
     Kiro debe mostrar este plan al usuario y obtener confirmacion antes de
@@ -178,8 +222,7 @@ async def get_project_plan(config: Any) -> str:
     tomadas y pasos siguientes.
 
     Args:
-        config: JSON string o dict con la configuracion completa del proyecto
-                (todas las respuestas del usuario segun el schema de get_required_inputs).
+        config: Configuracion completa del proyecto como JSON object o JSON string.
     """
     config_dict = _parse_config(config)
     result = handle_get_project_plan(config_dict)
@@ -187,7 +230,7 @@ async def get_project_plan(config: Any) -> str:
 
 
 @mcp.tool()
-async def initialize_project(config: Any, target_path: str = "") -> str:
+async def initialize_project(config: dict | str, target_path: str = "") -> str:
     """Genera el proyecto completo en disco. SOLO llamar despues de confirmacion del usuario.
 
     Renderiza todos los templates Jinja2 con los datos del usuario y escribe
@@ -198,7 +241,7 @@ async def initialize_project(config: Any, target_path: str = "") -> str:
     Si no se ha configurado ningun directorio, usa /repos como fallback.
 
     Args:
-        config: JSON string o dict con la configuracion completa del proyecto.
+        config: Configuracion completa del proyecto como JSON object o JSON string.
         target_path: Ruta base donde se genera el proyecto. Dejar vacio para usar el configurado.
     """
     config_dict = _parse_config(config)
