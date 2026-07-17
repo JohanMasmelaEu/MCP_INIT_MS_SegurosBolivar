@@ -57,43 +57,50 @@ def _parse_config(config) -> dict:
 def _parse_json_string(raw: str) -> dict:
     """Parsea un JSON string manejando doble-escape y formatos irregulares.
 
-    El LLM a veces envia el JSON con escaped backslashes extra:
+    El LLM a veces envia el JSON con escaped quotes:
     - Normal: {"project_name": "test"}
-    - Doble escape: {\\\"project_name\\\": \\\"test\\\"}
+    - Escaped: {\"project_name\": \"test\"}  (backslash + quote como chars literales)
 
     Args:
-        raw: String JSON potencialmente con doble escape.
+        raw: String JSON potencialmente con escape extra.
 
     Returns:
         Diccionario parseado.
     """
     # Intentar parseo directo primero
     try:
-        return json.loads(raw)
+        result = json.loads(raw)
+        # Si el resultado es un string, puede ser doble-encoded (string dentro de string)
+        if isinstance(result, str):
+            return json.loads(result)
+        return result
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    # Si falla, el string probablemente tiene backslash-quote literales (\")
+    # Reemplazar la secuencia de 2 chars: backslash seguido de quote
+    unescaped = raw.replace('\\\"', '"').replace("\\'", "'")
+
+    # Si despues de unescape empieza y termina con comilla, quitarlas
+    stripped = unescaped.strip()
+    if stripped.startswith('"') and stripped.endswith('"'):
+        stripped = stripped[1:-1]
+        # Despues de quitar comillas externas, puede necesitar otro unescape
+        stripped = stripped.replace('\\\\', '\\').replace('\\"', '"')
+
+    try:
+        return json.loads(stripped)
     except json.JSONDecodeError:
         pass
 
-    # Si falla, intentar remover un nivel de escape (\\\" → \")
+    # Intentar con el unescaped sin quitar comillas
     try:
-        unescaped = raw.replace('\\"', '"')
-        # Si empieza/termina con comilla extra despues de unescape, quitarla
-        if unescaped.startswith('"') and unescaped.endswith('"'):
-            unescaped = unescaped[1:-1]
         return json.loads(unescaped)
     except json.JSONDecodeError:
         pass
 
-    # Ultimo intento: doble decode (string dentro de string)
-    try:
-        inner = json.loads(raw)
-        if isinstance(inner, str):
-            return json.loads(inner)
-        return inner
-    except (json.JSONDecodeError, TypeError):
-        pass
-
     raise ValueError(
-        f"No se pudo parsear config como JSON. Primeros 100 chars: {raw[:100]}"
+        f"No se pudo parsear config como JSON. Primeros 100 chars: {repr(raw[:100])}"
     )
 
 
@@ -214,7 +221,7 @@ async def get_required_inputs(stack: str) -> str:
 
 
 @mcp.tool()
-async def get_project_plan(config: dict | str) -> str:
+async def get_project_plan(config: str) -> str:
     """Genera el plan detallado de archivos y carpetas a crear, SIN ejecutar la generacion.
 
     Kiro debe mostrar este plan al usuario y obtener confirmacion antes de
@@ -222,7 +229,7 @@ async def get_project_plan(config: dict | str) -> str:
     tomadas y pasos siguientes.
 
     Args:
-        config: Configuracion completa del proyecto como JSON object o JSON string.
+        config: JSON string con la configuracion completa del proyecto.
     """
     config_dict = _parse_config(config)
     result = handle_get_project_plan(config_dict)
@@ -230,7 +237,7 @@ async def get_project_plan(config: dict | str) -> str:
 
 
 @mcp.tool()
-async def initialize_project(config: dict | str, target_path: str = "") -> str:
+async def initialize_project(config: str, target_path: str = "") -> str:
     """Genera el proyecto completo en disco. SOLO llamar despues de confirmacion del usuario.
 
     Renderiza todos los templates Jinja2 con los datos del usuario y escribe
@@ -241,7 +248,7 @@ async def initialize_project(config: dict | str, target_path: str = "") -> str:
     Si no se ha configurado ningun directorio, usa /repos como fallback.
 
     Args:
-        config: Configuracion completa del proyecto como JSON object o JSON string.
+        config: JSON string con la configuracion completa del proyecto.
         target_path: Ruta base donde se genera el proyecto. Dejar vacio para usar el configurado.
     """
     config_dict = _parse_config(config)
