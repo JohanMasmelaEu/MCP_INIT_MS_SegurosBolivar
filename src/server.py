@@ -7,6 +7,7 @@ Transport: stdio (ejecucion local via Docker).
 
 import json
 import logging
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
@@ -23,6 +24,110 @@ from src.tools.stack_guidelines import (
     handle_get_stack_guidelines,
     handle_apply_stack_guidelines,
 )
+
+
+def _parse_config(config) -> dict:
+    """Parsea el input de configuracion independientemente del formato.
+
+    Acepta:
+    - str: JSON string con la config (formato esperado original).
+    - dict: JSON ya parseado (cuando el LLM lo pasa como objeto directamente).
+
+    Ademas, si el dict viene agrupado por categorias del schema de get_required_inputs
+    (project_identity, domain_modules, database, etc.), lo aplana al formato
+    esperado por ProjectConfig.
+
+    Args:
+        config: Configuracion como string JSON o dict.
+
+    Returns:
+        Diccionario plano compatible con ProjectConfig.
+    """
+    if isinstance(config, str):
+        config_dict = json.loads(config)
+    elif isinstance(config, dict):
+        config_dict = config
+    else:
+        raise ValueError(f"config debe ser str o dict, recibido: {type(config).__name__}")
+
+    return _flatten_categorized_config(config_dict)
+
+
+def _flatten_categorized_config(config_dict: dict) -> dict:
+    """Aplana un config agrupado por categorias al formato plano de ProjectConfig.
+
+    Si el dict ya esta en formato plano (tiene 'project_name' en raiz), lo retorna tal cual.
+    Si viene agrupado por categorias (project_identity, domain_modules, etc.), lo aplana.
+
+    Args:
+        config_dict: Diccionario potencialmente agrupado.
+
+    Returns:
+        Diccionario plano listo para ProjectConfig(**flat).
+    """
+    # Si ya tiene project_name en raiz, esta en formato plano
+    if "project_name" in config_dict:
+        return config_dict
+
+    flat = {}
+
+    # project_identity → campos planos en raiz
+    if "project_identity" in config_dict:
+        flat.update(config_dict["project_identity"])
+
+    # domain_modules → extraer campo modules
+    if "domain_modules" in config_dict:
+        dm = config_dict["domain_modules"]
+        if isinstance(dm, dict) and "modules" in dm:
+            flat["modules"] = dm["modules"]
+        elif isinstance(dm, list):
+            flat["modules"] = dm
+
+    # database → objeto anidado
+    if "database" in config_dict:
+        flat["database"] = config_dict["database"]
+
+    # authentication → extraer auth_strategy
+    if "authentication" in config_dict:
+        auth = config_dict["authentication"]
+        if isinstance(auth, dict) and "auth_strategy" in auth:
+            flat["auth_strategy"] = auth["auth_strategy"]
+        elif isinstance(auth, str):
+            flat["auth_strategy"] = auth
+
+    # integrations → objeto anidado
+    if "integrations" in config_dict:
+        flat["integrations"] = config_dict["integrations"]
+
+    # observability → objeto anidado
+    if "observability" in config_dict:
+        flat["observability"] = config_dict["observability"]
+
+    # artifactory → extraer artifactory_url
+    if "artifactory" in config_dict:
+        art = config_dict["artifactory"]
+        if isinstance(art, dict) and "artifactory_url" in art:
+            flat["artifactory_url"] = art["artifactory_url"]
+        elif isinstance(art, str):
+            flat["artifactory_url"] = art
+
+    # mcp_marketplace → selected_mcps
+    if "mcp_marketplace" in config_dict:
+        mkt = config_dict["mcp_marketplace"]
+        if isinstance(mkt, dict) and "selected_mcps" in mkt:
+            flat["selected_mcps"] = mkt["selected_mcps"]
+        elif isinstance(mkt, list):
+            flat["selected_mcps"] = mkt
+
+    # project_metadata → campos planos
+    if "project_metadata" in config_dict:
+        flat.update(config_dict["project_metadata"])
+
+    # Si quedo vacio despues del flatten, el input no era categorizado ni plano
+    if not flat:
+        return config_dict
+
+    return flat
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("mcp_init_ms")
@@ -65,7 +170,7 @@ async def get_required_inputs(stack: str) -> str:
 
 
 @mcp.tool()
-async def get_project_plan(config: str) -> str:
+async def get_project_plan(config: Any) -> str:
     """Genera el plan detallado de archivos y carpetas a crear, SIN ejecutar la generacion.
 
     Kiro debe mostrar este plan al usuario y obtener confirmacion antes de
@@ -73,16 +178,16 @@ async def get_project_plan(config: str) -> str:
     tomadas y pasos siguientes.
 
     Args:
-        config: JSON string con la configuracion completa del proyecto
+        config: JSON string o dict con la configuracion completa del proyecto
                 (todas las respuestas del usuario segun el schema de get_required_inputs).
     """
-    config_dict = json.loads(config)
+    config_dict = _parse_config(config)
     result = handle_get_project_plan(config_dict)
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
 @mcp.tool()
-async def initialize_project(config: str, target_path: str = "") -> str:
+async def initialize_project(config: Any, target_path: str = "") -> str:
     """Genera el proyecto completo en disco. SOLO llamar despues de confirmacion del usuario.
 
     Renderiza todos los templates Jinja2 con los datos del usuario y escribe
@@ -93,10 +198,10 @@ async def initialize_project(config: str, target_path: str = "") -> str:
     Si no se ha configurado ningun directorio, usa /repos como fallback.
 
     Args:
-        config: JSON string con la configuracion completa del proyecto.
+        config: JSON string o dict con la configuracion completa del proyecto.
         target_path: Ruta base donde se genera el proyecto. Dejar vacio para usar el configurado.
     """
-    config_dict = json.loads(config)
+    config_dict = _parse_config(config)
     result = handle_initialize_project(config_dict, target_path or None)
     return json.dumps(result, ensure_ascii=False, indent=2)
 
