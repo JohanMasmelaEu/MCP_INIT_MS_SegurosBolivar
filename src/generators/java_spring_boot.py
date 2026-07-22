@@ -198,6 +198,15 @@ class JavaSpringBootGenerator(BaseGenerator):
             "i18n": self.config.i18n,
             "cache": self.config.cache,
             "docker_profile": self.config.docker_profile,
+            # Puertos
+            "app_port": self.config.app_port,
+            "localstack_port": self.config.localstack_port,
+            "redis_port": self.config.redis_port,
+            # LocalStack
+            "localstack_services": self.config.localstack_services,
+            # Seguridad
+            "cors_allow_credentials": self.config.cors_allow_credentials,
+            "extra_public_paths": self.config.extra_public_paths,
         }
 
     def _render_write(self, template_path: str, output_path: str, context: dict | None = None) -> None:
@@ -309,9 +318,15 @@ class JavaSpringBootGenerator(BaseGenerator):
         self._render_write("infra/down.ps1.j2", "development/docker-local-ms/down.ps1")
         self._render_write("infra/down.sh.j2", "development/docker-local-ms/down.sh")
         self._render_write("infra/seed-localstack-ssm.sh.j2", "development/docker-local-ms/scripts/seed-localstack-ssm.sh")
-        self._render_write("infra/mock-oauth-config.json.j2", "development/docker-local-ms/config/mock-oauth-config.json")
         self._render_write("infra/env.sample.j2", "development/.env.sample")
         self._render_write("infra/env.j2", ".env")
+
+        # Mock OAuth solo si la estrategia lo requiere
+        if self.config.auth_strategy.value == "oauth2-resource-server":
+            self._render_write(
+                "infra/mock-oauth-config.json.j2",
+                "development/docker-local-ms/config/mock-oauth-config.json",
+            )
 
     def _generate_cicd(self) -> None:
         """Genera archivos CI/CD (GitHub Actions)."""

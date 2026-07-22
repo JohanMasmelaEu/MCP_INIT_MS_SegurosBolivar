@@ -149,9 +149,14 @@ def _build_file_tree(config: ProjectConfig) -> list[dict]:
         _file(f"{p}/development/docker-local-ms/down.ps1", "Script para detener compose (Windows)"),
         _file(f"{p}/development/docker-local-ms/down.sh", "Script para detener compose (Unix)"),
         _file(f"{p}/development/docker-local-ms/scripts/seed-localstack-ssm.sh", "Semilla parametros SSM en LocalStack"),
-        _file(f"{p}/development/docker-local-ms/config/mock-oauth-config.json", "Config Mock OAuth Server"),
         _file(f"{p}/development/.env.sample", "Template de variables de entorno"),
     ])
+
+    # Mock OAuth solo si aplica
+    if config.auth_strategy.value == "oauth2-resource-server":
+        files.append(
+            _file(f"{p}/development/docker-local-ms/config/mock-oauth-config.json", "Config Mock OAuth Server")
+        )
 
     # --- CI/CD ---
     files.extend([
@@ -245,6 +250,17 @@ def _build_decisions(config: ProjectConfig) -> list[str]:
 
     decisions.append(f"BD: PostgreSQL schema '{config.database.db_schema}' en puerto {config.database.db_port}")
     decisions.append(f"Modulos de dominio: {len(config.modules)} ({', '.join(m.module_name for m in config.modules)})")
+
+    # Puertos y cache
+    decisions.append(f"Puertos: app={config.app_port}, LocalStack={config.localstack_port}")
+    if config.cache:
+        decisions.append(f"Cache: {config.cache} (puerto {config.redis_port})")
+    else:
+        decisions.append("Cache: ninguno")
+    decisions.append(f"LocalStack services: {', '.join(config.localstack_services)}")
+    if config.extra_public_paths:
+        decisions.append(f"Endpoints publicos extra: {', '.join(config.extra_public_paths)}")
+    decisions.append(f"CORS allowCredentials: {config.cors_allow_credentials}")
 
     return decisions
 

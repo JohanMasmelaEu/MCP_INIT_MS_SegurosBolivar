@@ -9,6 +9,11 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+{% if auth_strategy == "oauth2-resource-server" %}
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+{% elif auth_strategy == "machine-to-machine" %}
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+{% endif %}
 
 import java.util.Arrays;
 import java.util.List;
@@ -21,9 +26,11 @@ import java.util.List;
 {% elif auth_strategy == "api-gateway-delegated" %}
  * Modo: API Gateway delegated — confia en el gateway, sin validacion local de JWT.
 {% elif auth_strategy == "oauth2-resource-server" %}
- * Modo: OAuth2 Resource Server — valida JWT localmente.
+ * Modo: OAuth2 Resource Server — valida JWT localmente con Spring Security OAuth2.
 {% elif auth_strategy == "machine-to-machine" %}
- * Modo: Machine-to-machine — validacion de client_credentials scope.
+ * Modo: Machine-to-machine — JWT propio con clave simetrica.
+ * TODO: Implementar JwtAuthFilter que valide el token custom y registrarlo
+ *       antes de UsernamePasswordAuthenticationFilter.
 {% endif %}
  */
 @Configuration
@@ -55,20 +62,29 @@ public class SecurityConfig {
         // Por ahora todas las rutas estan permitidas.
         http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
 {% elif auth_strategy == "api-gateway-delegated" %}
-        // API Gateway se encarga de la autenticacion. MS permite todo.
+        // API Gateway se encarga de la autenticacion. Backend permite todo.
         http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
 {% elif auth_strategy == "oauth2-resource-server" %}
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/**", "/swagger-ui/**", "{{ openapi_path }}/**").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/swagger-ui/**", "{{ openapi_path }}/**").permitAll()
+{% for path in extra_public_paths %}
+                .requestMatchers("{{ path }}").permitAll()
+{% endfor %}
                 .anyRequest().authenticated()
         );
         http.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}));
 {% elif auth_strategy == "machine-to-machine" %}
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/**", "/swagger-ui/**", "{{ openapi_path }}/**").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/swagger-ui/**", "{{ openapi_path }}/**").permitAll()
+{% for path in extra_public_paths %}
+                .requestMatchers("{{ path }}").permitAll()
+{% endfor %}
                 .anyRequest().authenticated()
         );
-        http.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}));
+        // TODO: Registrar JwtAuthFilter antes de UsernamePasswordAuthenticationFilter
+        // http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 {% endif %}
 
         // Security headers filter
@@ -83,7 +99,7 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(splitCommaSeparated(allowedOriginPatterns));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+        config.setAllowCredentials({{ cors_allow_credentials | lower }});
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

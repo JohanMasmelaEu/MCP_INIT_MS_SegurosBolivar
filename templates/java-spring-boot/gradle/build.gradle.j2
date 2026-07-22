@@ -135,14 +135,21 @@ dependencies {
     runtimeOnly 'org.postgresql:postgresql'
 
     implementation 'org.springframework.boot:spring-boot-starter-security'
+{% if auth_strategy == "oauth2-resource-server" %}
     implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server'
     testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server-test'
+{% endif %}
 
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
 
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+{% if cache == "redis" %}
+
+    // --- Cache (Redis) ---
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+{% endif %}
 
     // --- OpenAPI / Swagger ---
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'
@@ -161,9 +168,6 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-annotations'
     implementation 'com.fasterxml.jackson.core:jackson-core'
     implementation 'org.json:json:20231013'
-
-    // --- Apache POI (carga masiva Excel) ---
-    implementation 'org.apache.poi:poi-ooxml:5.4.1'
 
     // --- AWS ---
     implementation 'com.amazonaws:aws-java-sdk-ssm:1.12.722'
@@ -213,8 +217,17 @@ if (isLocalExecution) {
         task.doFirst {
             System.getenv().each { key, value ->
                 if (key != null && value != null && (
+{% if auth_strategy == "oauth2-resource-server" %}
                         key.startsWith("APP_OAUTH")
                                 || key == "APP_AUTH_USE_API_GATEWAY"
+{% elif auth_strategy == "machine-to-machine" %}
+                        key.startsWith("APP_JWT")
+{% else %}
+                        key.startsWith("APP_AUTH")
+{% endif %}
+{% if cache == "redis" %}
+                                || key.startsWith("APP_REDIS")
+{% endif %}
                                 || key == "SERVER_PORT"
                                 || key == "ENV_PREFIX")) {
                     task.environment.putIfAbsent(key, value)
@@ -224,18 +237,30 @@ if (isLocalExecution) {
         task.environment.putIfAbsent("AWS_ACCESS_KEY_ID", "test")
         task.environment.putIfAbsent("AWS_SECRET_ACCESS_KEY", "test")
         task.environment.putIfAbsent("AWS_DEFAULT_REGION", "us-east-1")
-        task.environment.putIfAbsent("AWS_ENDPOINT_URL_SSM", "http://localhost:4566")
-        task.environment.putIfAbsent("APP_AUTH_USE_API_GATEWAY", "true")
+        task.environment.putIfAbsent("AWS_ENDPOINT_URL_SSM", "http://localhost:{{ localstack_port }}")
         task.environment.putIfAbsent("ENV_PREFIX", "dev")
-        task.environment.putIfAbsent("SERVER_PORT", "8080")
+        task.environment.putIfAbsent("SERVER_PORT", "{{ app_port }}")
+        task.environment.putIfAbsent("SPRING_PROFILES_ACTIVE", "local")
+{% if auth_strategy == "oauth2-resource-server" %}
+        task.environment.putIfAbsent("APP_AUTH_USE_API_GATEWAY", "false")
         task.environment.putIfAbsent("APP_OAUTH_COGNITO_CLIENT_ID", "{{ context_path_clean }}-local-client")
         task.environment.putIfAbsent("APP_OAUTH_COGNITO_CLIENT_SECRET", "{{ context_path_clean }}-local-secret")
         task.environment.putIfAbsent("APP_OAUTH_COGNITO_DOMAIN", "localhost:8090")
         task.environment.putIfAbsent("APP_OAUTH_COGNITO_TOKEN_URI_SCHEME", "http")
         task.environment.putIfAbsent("APP_OAUTH_COGNITO_TOKEN_URI_PATH", "/default/token")
         task.environment.putIfAbsent("APP_OAUTH_REFRESH_COOKIE_PATH", "{{ context_path }}")
-        task.environment.putIfAbsent("SPRING_PROFILES_ACTIVE", "local")
-        task.jvmArgs("-Daws.endpointUrl.ssm=http://localhost:4566")
+{% elif auth_strategy == "machine-to-machine" %}
+        task.environment.putIfAbsent("APP_AUTH_USE_API_GATEWAY", "false")
+        task.environment.putIfAbsent("APP_JWT_SIGNING_KEY", "local-dev-signing-key-do-not-use-in-prod")
+        task.environment.putIfAbsent("APP_JWT_TTL_SECONDS", "3600")
+{% elif auth_strategy == "api-gateway-delegated" %}
+        task.environment.putIfAbsent("APP_AUTH_USE_API_GATEWAY", "true")
+{% endif %}
+{% if cache == "redis" %}
+        task.environment.putIfAbsent("APP_REDIS_HOST", "localhost")
+        task.environment.putIfAbsent("APP_REDIS_PORT", "{{ redis_port }}")
+{% endif %}
+        task.jvmArgs("-Daws.endpointUrl.ssm=http://localhost:{{ localstack_port }}")
     }
 }
 

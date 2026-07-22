@@ -20,7 +20,8 @@ RUN ./gradlew bootJar -x test --no-daemon \
     -Partifactory_user="${ARTIFACTORY_USER}" \
     -Partifactory_password="${ARTIFACTORY_PASSWORD}"
 
-# Runtime stage: JRE 21 + Datadog Java Agent
+# Runtime stage: JRE 21
+# Container expone 8080 internamente. El host mapea a {{ app_port }}:8080 via docker-compose.
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
@@ -32,12 +33,6 @@ ENV ENV_PREFIX=dev
 
 # Datadog Java Agent (APM + tracing automatico)
 ADD https://dtdg.co/latest-java-tracer /app/dd-java-agent.jar
-
-ENV DD_SERVICE=${DD_SERVICE:-{{ dd_service }}}
-ENV DD_ENV=${DD_ENV:-local}
-ENV DD_VERSION=${DD_VERSION:-0.0.1-SNAPSHOT}
-ENV DD_AGENT_HOST=${DD_AGENT_HOST:-datadog-agent}
-ENV DD_TRACE_AGENT_PORT=${DD_TRACE_AGENT_PORT:-8126}
 {% endif %}
 
 COPY --from=builder /app/build/libs/{{ artifact_name }}-0.0.1-SNAPSHOT.jar app.jar
@@ -49,11 +44,9 @@ USER appuser
 EXPOSE 8080
 {% if observability.datadog_enabled %}
 
+# DD_AGENT_HOST y DD_TRACE_AGENT_PORT se inyectan via docker-compose, no se hardcodean aqui.
 ENTRYPOINT ["java", \
   "-javaagent:/app/dd-java-agent.jar", \
-  "-Ddd.service=${DD_SERVICE}", \
-  "-Ddd.env=${DD_ENV}", \
-  "-Ddd.version=${DD_VERSION}", \
   "-Ddd.logs.injection=true", \
   "-Ddd.trace.analytics.enabled=true", \
   "-Ddd.profiling.enabled=false", \

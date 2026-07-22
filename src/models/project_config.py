@@ -95,6 +95,26 @@ class DatabaseConfig(BaseModel):
     ssm_username_path: Optional[str] = Field(default=None, description="Ruta SSM del usuario")
     ssm_password_path: Optional[str] = Field(default=None, description="Ruta SSM de la contrasena")
 
+    @property
+    def ssm_endpoint_resolved(self) -> str:
+        """Ruta SSM del endpoint BD, derivada del prefix si no se especifica."""
+        return self.ssm_endpoint_path or f"{self.ssm_prefix or '/app/dev'}/database/endpoint"
+
+    @property
+    def ssm_dbname_resolved(self) -> str:
+        """Ruta SSM del nombre BD, derivada del prefix si no se especifica."""
+        return self.ssm_dbname_path or f"{self.ssm_prefix or '/app/dev'}/database/dbname"
+
+    @property
+    def ssm_username_resolved(self) -> str:
+        """Ruta SSM del usuario BD, derivada del prefix si no se especifica."""
+        return self.ssm_username_path or f"{self.ssm_prefix or '/app/dev'}/database/username"
+
+    @property
+    def ssm_password_resolved(self) -> str:
+        """Ruta SSM de la password BD, derivada del prefix si no se especifica."""
+        return self.ssm_password_path or f"{self.ssm_prefix or '/app/dev'}/database/password"
+
 
 class ExternalHttpService(BaseModel):
     """Configuracion de un servicio HTTP externo a consumir."""
@@ -217,6 +237,44 @@ class ProjectConfig(BaseModel):
         description="Perfil de imagen Docker (ej: 'java-redis'). Define qué incluye la imagen.",
     )
 
+    # --- Puertos locales (evitar colisiones entre MS del mismo ecosistema) ---
+    app_port: int = Field(
+        default=8080,
+        description="Puerto HTTP de la app en local. Cambiar si otro MS ya usa 8080.",
+    )
+    localstack_port: int = Field(
+        default=4566,
+        description="Puerto de LocalStack. Cambiar si otro MS ya usa 4566.",
+    )
+    redis_port: int = Field(
+        default=6379,
+        description="Puerto Redis local. Solo aplica si cache='redis'.",
+    )
+
+    # --- LocalStack services ---
+    localstack_services: list[str] = Field(
+        default_factory=lambda: ["ssm"],
+        description="Servicios AWS a simular en LocalStack (ssm, secretsmanager, s3, sqs, events).",
+    )
+
+    # --- OpenAPI path custom ---
+    openapi_base_path: Optional[str] = Field(
+        default=None,
+        description="Path custom para documentacion OpenAPI. Si no se indica, se genera automaticamente.",
+    )
+
+    # --- CORS ---
+    cors_allow_credentials: bool = Field(
+        default=True,
+        description="allowCredentials en CORS. False para APIs M2M sin cookies.",
+    )
+
+    # --- Endpoints publicos adicionales (sin auth) ---
+    extra_public_paths: list[str] = Field(
+        default_factory=list,
+        description="Paths adicionales que no requieren autenticacion (ej: /api/v1/auth/token).",
+    )
+
     @field_validator("project_name")
     @classmethod
     def validate_project_name_ends_with_ms(cls, v: str) -> str:
@@ -297,7 +355,10 @@ class ProjectConfig(BaseModel):
     def openapi_path(self) -> str:
         """Path del endpoint OpenAPI JSON.
 
-        Ej: /srv-gestionpolizas-openapi
+        Si openapi_base_path esta definido, lo usa directamente.
+        Si no, genera uno automatico: /srv-{nombre_limpio}-openapi.
         """
+        if self.openapi_base_path:
+            return self.openapi_base_path
         clean = self.project_name.replace("-ms", "").replace("-", "")
         return f"/srv-{clean}-openapi"

@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:80}
+  port: ${SERVER_PORT:{{ app_port }}}
   servlet:
     context-path: {{ context_path }}
 
@@ -22,6 +22,12 @@ spring:
   data:
     web:
       pageSerializationMode: VIA_DTO
+{% if cache == "redis" %}
+    redis:
+      host: ${APP_REDIS_HOST:localhost}
+      port: ${APP_REDIS_PORT:{{ redis_port }}}
+      timeout: 5000ms
+{% endif %}
   servlet:
     multipart:
       max-file-size: 8MB
@@ -40,7 +46,7 @@ app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:}
     allowed-origin-patterns: "${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,https://localhost:*,https://127.0.0.1:*}"
-    allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:false}
+    allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:{{ cors_allow_credentials | lower }}}
   database:
     host-override: ${APP_DATABASE_HOST_OVERRIDE:}
     rds-ssl-root-cert: ${APP_DATABASE_RDS_SSL_ROOT_CERT:}
@@ -54,13 +60,14 @@ app:
     max-file-size-bytes: 10485760
 {% endif %}
   auth:
-    use-api-gateway: ${APP_AUTH_USE_API_GATEWAY:false}
+    use-api-gateway: ${APP_AUTH_USE_API_GATEWAY:{% if auth_strategy == "api-gateway-delegated" %}true{% else %}false{% endif %}}
+{% if auth_strategy == "oauth2-resource-server" %}
   oauth:
     cognito:
       domain: ${APP_OAUTH_COGNITO_DOMAIN:control-acceso-ui-pool-{{ context_path_clean }}-dev.auth.us-east-1.amazoncognito.com}
       client-id: ${APP_OAUTH_COGNITO_CLIENT_ID:}
       client-secret: ${APP_OAUTH_COGNITO_CLIENT_SECRET:}
-      client-secret-name: ${APP_OAUTH_COGNITO_CLIENT_SECRET_NAME:{{ ssm_app_prefix }}/dev/cognito/client-secret}
+      client-secret-name: ${APP_OAUTH_COGNITO_CLIENT_SECRET_NAME:{{ db.ssm_prefix or ssm_app_prefix + '/dev' }}/cognito/client-secret}
       redirect-uri-allowlist:
         - https://{{ context_path_clean }}-dev.bolnet.com.co/login
         - http://localhost:4200/login
@@ -76,24 +83,32 @@ app:
       max-age-seconds: ${APP_OAUTH_REFRESH_COOKIE_MAX_AGE_SECONDS:28800}
       secure: true
       same-site: None
-  solicitud:
-    api-key-header: x-api-key
-    usuario-token:
-      secret-key-base64: ${APP_SOLICITUD_USUARIO_TOKEN_SECRET_KEY_BASE64:}
-      required-json-fields: []
+{% elif auth_strategy == "machine-to-machine" %}
+  jwt:
+    signing-key: ${APP_JWT_SIGNING_KEY:}
+    ttl-seconds: ${APP_JWT_TTL_SECONDS:3600}
+{% endif %}
   aws:
     env_prefix: /${ENV_PREFIX:dev}
     db-params:
-      endpoint: {{ ssm_app_prefix }}${app.aws.env_prefix}/{{ context_path_clean }}-${ENV_PREFIX:dev}-master/endpoint
-      database-name: {{ ssm_app_prefix }}${app.aws.env_prefix}/{{ context_path_clean }}-${ENV_PREFIX:dev}-master/database_name
-      username: {{ ssm_app_prefix }}${app.aws.env_prefix}/database/backend/username
-      password: {{ ssm_app_prefix }}${app.aws.env_prefix}/database/backend/password
+      endpoint: {{ db.ssm_endpoint_resolved }}
+      database-name: {{ db.ssm_dbname_resolved }}
+      username: {{ db.ssm_username_resolved }}
+      password: {{ db.ssm_password_resolved }}
+{% if auth_strategy == "machine-to-machine" %}
+    jwt-params:
+      signing-key: {{ db.ssm_prefix or ssm_app_prefix + '/dev' }}/jwt/signing-key
+      ttl-seconds: {{ db.ssm_prefix or ssm_app_prefix + '/dev' }}/jwt/ttl-seconds
+{% endif %}
+{% if cache == "redis" %}
+    redis-params:
+      host: {{ db.ssm_prefix or ssm_app_prefix + '/dev' }}/redis/host
+      port: {{ db.ssm_prefix or ssm_app_prefix + '/dev' }}/redis/port
+{% endif %}
   parameter-store:
     enabled: ${APP_PARAMETER_STORE_ENABLED:true}
-  dev:
-    token: ${APP_DEV_TOKEN:}
   openapi:
-    server-local-url: ${APP_OPENAPI_SERVER_LOCAL_URL:http://localhost{{ context_path }}}
+    server-local-url: ${APP_OPENAPI_SERVER_LOCAL_URL:http://localhost:{{ app_port }}{{ context_path }}}
     server-dev-url: ${APP_OPENAPI_SERVER_DEV_URL:}
     server-qa-url: ${APP_OPENAPI_SERVER_QA_URL:}
     server-prod-url: ${APP_OPENAPI_SERVER_PROD_URL:}

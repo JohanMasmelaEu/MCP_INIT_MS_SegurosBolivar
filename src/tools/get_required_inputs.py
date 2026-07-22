@@ -22,8 +22,11 @@ def handle_get_required_inputs(stack: str) -> dict:
             _domain_modules_category(),
             _database_category(),
             _authentication_category(),
+            _security_details_category(),
             _integrations_category(),
             _observability_category(),
+            _ports_category(),
+            _localstack_category(),
             _artifactory_category(),
             _mcp_marketplace_category(),
             _project_metadata_category(),
@@ -387,6 +390,102 @@ def _mcp_marketplace_category() -> dict:
                         ],
                     },
                 ],
+            },
+        ],
+    }
+
+
+def _ports_category() -> dict:
+    """Categoria: puertos locales para evitar colisiones."""
+    return {
+        "name": "ports",
+        "label": "Puertos Locales",
+        "description": (
+            "Puertos para evitar colisiones si hay otros MS corriendo en la misma maquina. "
+            "Si no se cambian, se usan los defaults."
+        ),
+        "fields": [
+            {
+                "key": "app_port",
+                "label": "Puerto HTTP de la app",
+                "type": "integer",
+                "required": False,
+                "default": 8080,
+                "description": "Cambiar si otro MS ya usa 8080 (ej: 8081, 8082).",
+            },
+            {
+                "key": "localstack_port",
+                "label": "Puerto de LocalStack",
+                "type": "integer",
+                "required": False,
+                "default": 4566,
+                "description": "Cambiar si otro MS ya usa 4566 (ej: 4567, 4568).",
+            },
+            {
+                "key": "redis_port",
+                "label": "Puerto Redis local (solo si cache=redis)",
+                "type": "integer",
+                "required": False,
+                "default": 6379,
+                "description": "Cambiar si otro servicio ya usa 6379 (ej: 6380).",
+            },
+        ],
+    }
+
+
+def _localstack_category() -> dict:
+    """Categoria: servicios AWS simulados en LocalStack."""
+    return {
+        "name": "localstack",
+        "label": "Servicios AWS Simulados (LocalStack)",
+        "description": "Servicios de AWS que LocalStack simulara en el ambiente local.",
+        "fields": [
+            {
+                "key": "localstack_services",
+                "label": "Servicios a habilitar",
+                "type": "array",
+                "required": False,
+                "default": ["ssm"],
+                "description": "Servicios AWS que LocalStack simulara en docker-compose.",
+                "options": ["ssm", "secretsmanager", "s3", "sqs", "events"],
+                "example": ["ssm", "secretsmanager"],
+            },
+        ],
+    }
+
+
+def _security_details_category() -> dict:
+    """Categoria: detalles adicionales de seguridad."""
+    return {
+        "name": "security_details",
+        "label": "Configuracion de Seguridad (detalles)",
+        "description": "Detalles adicionales de seguridad que dependen de la auth_strategy elegida.",
+        "fields": [
+            {
+                "key": "cors_allow_credentials",
+                "label": "CORS allowCredentials",
+                "type": "boolean",
+                "required": False,
+                "default": True,
+                "description": "False para APIs M2M sin cookies. True si hay frontend con sesion.",
+            },
+            {
+                "key": "extra_public_paths",
+                "label": "Endpoints publicos adicionales (sin auth)",
+                "type": "array",
+                "required": False,
+                "default": [],
+                "description": "Paths que no requieren token (ej: /api/v1/auth/token, /api/v1/health).",
+                "example": ["/api/v1/auth/token", "/api/v1/conexion/**"],
+            },
+            {
+                "key": "openapi_base_path",
+                "label": "Path base OpenAPI/Swagger",
+                "type": "string",
+                "required": False,
+                "default": None,
+                "description": "Path custom para la documentacion. Si no se indica, se genera automaticamente (ej: /srv-miapp-openapi).",
+                "example": "/srv-cucoperacional-openapi",
             },
         ],
     }

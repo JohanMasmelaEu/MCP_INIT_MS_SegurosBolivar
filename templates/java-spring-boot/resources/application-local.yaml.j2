@@ -5,11 +5,21 @@ spring:
       on-profile: local
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:{{ app_port }}}
+{% if cache == "redis" %}
+
+  # Redis local (fuera de Docker: apunta a host directo)
+spring:
+  data:
+    redis:
+      host: ${APP_REDIS_HOST:localhost}
+      port: ${APP_REDIS_PORT:{{ redis_port }}}
+{% endif %}
 
 app:
   cors:
     allowed-origin-patterns: "http://localhost:*,http://127.0.0.1:*,http://[::1]:*,https://localhost:*,https://127.0.0.1:*,https://host.docker.internal:*"
+{% if auth_strategy == "oauth2-resource-server" %}
   oauth:
     cognito:
       domain: ${APP_OAUTH_COGNITO_DOMAIN:localhost:8090}
@@ -20,3 +30,9 @@ app:
       token-uri-path: ${APP_OAUTH_COGNITO_TOKEN_URI_PATH:/default/token}
     refresh-cookie:
       path: {{ context_path }}
+{% elif auth_strategy == "machine-to-machine" %}
+  auth:
+    jwt:
+      signing-key: ${APP_JWT_SIGNING_KEY:local-dev-signing-key-do-not-use-in-prod}
+      ttl-seconds: ${APP_JWT_TTL_SECONDS:3600}
+{% endif %}

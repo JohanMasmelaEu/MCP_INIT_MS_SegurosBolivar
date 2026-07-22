@@ -174,6 +174,22 @@ def _flatten_categorized_config(config_dict: dict) -> dict:
     if "project_metadata" in config_dict:
         flat.update(config_dict["project_metadata"])
 
+    # ports → campos planos (app_port, localstack_port, redis_port)
+    if "ports" in config_dict:
+        flat.update(config_dict["ports"])
+
+    # localstack → extraer localstack_services
+    if "localstack" in config_dict:
+        ls = config_dict["localstack"]
+        if isinstance(ls, dict) and "localstack_services" in ls:
+            flat["localstack_services"] = ls["localstack_services"]
+        elif isinstance(ls, list):
+            flat["localstack_services"] = ls
+
+    # security_details → campos planos (cors_allow_credentials, extra_public_paths, openapi_base_path)
+    if "security_details" in config_dict:
+        flat.update(config_dict["security_details"])
+
     # Si quedo vacio despues del flatten, el input no era categorizado ni plano
     if not flat:
         return config_dict
