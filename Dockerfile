@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM python:3.12-slim
 
 LABEL maintainer="Equipo Arquitectura - Seguros Bolivar"
@@ -11,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git \
 
 # Dependencias Python
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN --network=host pip install --no-cache-dir -r requirements.txt
 
 # Codigo fuente del MCP
 COPY src/ ./src/
