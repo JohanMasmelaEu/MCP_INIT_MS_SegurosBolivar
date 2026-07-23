@@ -1,0 +1,118 @@
+"""Tests unitarios para {{ m.entity_name }}Service."""
+
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from src.errors.bolivar_business_error import BolivarBusinessError
+from src.{{ m.module_name }}.service import {{ m.entity_name }}Service
+
+
+@pytest.fixture
+def mock_repository() -> AsyncMock:
+    """Mock del repository."""
+    return AsyncMock()
+
+
+@pytest.fixture
+def service(mock_repository: AsyncMock) -> {{ m.entity_name }}Service:
+    """Instancia del servicio con repository mockeado."""
+    return {{ m.entity_name }}Service(mock_repository)
+
+
+class TestCrear:
+    """Tests para {{ m.entity_name }}Service.crear."""
+
+    async def test_crear_con_datos_validos(
+        self, service: {{ m.entity_name }}Service, mock_repository: AsyncMock
+    ) -> None:
+        """Debe crear un {{ m.entity_name }} exitosamente."""
+        # Arrange
+        mock_entity = MagicMock()
+        mock_entity.id = 1
+{% for field in m.fields %}
+{% if field.field_type.value == "String" %}
+        mock_entity.{{ field.name }} = "test-value"
+{% elif field.field_type.value == "Boolean" %}
+        mock_entity.{{ field.name }} = True
+{% elif field.field_type.value == "Long" or field.field_type.value == "Integer" %}
+        mock_entity.{{ field.name }} = 1
+{% elif field.field_type.value == "BigDecimal" %}
+        mock_entity.{{ field.name }} = "100.50"
+{% endif %}
+{% endfor %}
+        mock_entity.creado_por = "system"
+        mock_entity.fecha_creacion = "2024-01-01T00:00:00"
+        mock_entity.modificado_por = None
+        mock_entity.fecha_modificacion = None
+        mock_repository.insertar.return_value = mock_entity
+
+        dto = MagicMock()
+        dto.model_dump.return_value = {}
+
+        # Act
+        resultado = await service.crear(dto)
+
+        # Assert
+        assert resultado.id == 1
+        mock_repository.insertar.assert_called_once()
+
+
+class TestObtenerPorId:
+    """Tests para {{ m.entity_name }}Service.obtener_por_id."""
+
+    async def test_retorna_entidad_cuando_existe(
+        self, service: {{ m.entity_name }}Service, mock_repository: AsyncMock
+    ) -> None:
+        """Debe retornar la entidad si existe."""
+        # Arrange
+        mock_entity = MagicMock()
+        mock_entity.id = 1
+        mock_repository.buscar_por_id.return_value = mock_entity
+
+        # Act
+        resultado = await service.obtener_por_id(1)
+
+        # Assert
+        assert resultado.id == 1
+
+    async def test_lanza_error_cuando_no_existe(
+        self, service: {{ m.entity_name }}Service, mock_repository: AsyncMock
+    ) -> None:
+        """Debe lanzar BolivarBusinessError si no existe."""
+        # Arrange
+        mock_repository.buscar_por_id.return_value = None
+
+        # Act & Assert
+        with pytest.raises(BolivarBusinessError) as exc_info:
+            await service.obtener_por_id(999)
+        assert exc_info.value.http_status == 404
+
+
+class TestEliminar:
+    """Tests para {{ m.entity_name }}Service.eliminar."""
+
+    async def test_elimina_cuando_existe(
+        self, service: {{ m.entity_name }}Service, mock_repository: AsyncMock
+    ) -> None:
+        """Debe eliminar exitosamente si existe."""
+        # Arrange
+        mock_repository.buscar_por_id.return_value = MagicMock()
+        mock_repository.eliminar.return_value = None
+
+        # Act
+        await service.eliminar(1)
+
+        # Assert
+        mock_repository.eliminar.assert_called_once_with(1)
+
+    async def test_lanza_error_cuando_no_existe(
+        self, service: {{ m.entity_name }}Service, mock_repository: AsyncMock
+    ) -> None:
+        """Debe lanzar BolivarBusinessError si no existe."""
+        # Arrange
+        mock_repository.buscar_por_id.return_value = None
+
+        # Act & Assert
+        with pytest.raises(BolivarBusinessError):
+            await service.eliminar(999)

@@ -1,5 +1,8 @@
 """Tool: get_required_inputs — schema de datos requeridos para generar un proyecto."""
 
+# Stacks soportados por el MCP
+_SUPPORTED_STACKS = {"java-spring-boot", "node-express", "python-fastapi"}
+
 
 def handle_get_required_inputs(stack: str) -> dict:
     """Retorna el schema de inputs agrupado por categorias para el stack indicado.
@@ -10,26 +13,123 @@ def handle_get_required_inputs(stack: str) -> dict:
     Returns:
         Schema JSON con categorias, campos, tipos, defaults y ejemplos.
     """
-    if stack != "java-spring-boot":
+    if stack not in _SUPPORTED_STACKS:
+        available = ", ".join(sorted(_SUPPORTED_STACKS))
         return {
-            "error": f"Stack '{stack}' no soportado. Stacks disponibles: java-spring-boot",
+            "error": f"Stack '{stack}' no soportado. Stacks disponibles: {available}",
         }
 
+    categories = _common_categories()
+
+    # Agregar categoria especifica del stack
+    if stack == "node-express":
+        categories.append(_node_specific_category())
+    elif stack == "python-fastapi":
+        categories.append(_python_specific_category())
+
     return {
-        "stack": "java-spring-boot",
-        "categories": [
-            _project_identity_category(),
-            _domain_modules_category(),
-            _database_category(),
-            _authentication_category(),
-            _security_details_category(),
-            _integrations_category(),
-            _observability_category(),
-            _ports_category(),
-            _localstack_category(),
-            _artifactory_category(),
-            _mcp_marketplace_category(),
-            _project_metadata_category(),
+        "stack": stack,
+        "categories": categories,
+    }
+
+
+def _common_categories() -> list[dict]:
+    """Categorias comunes a todos los stacks."""
+    return [
+        _project_identity_category(),
+        _domain_modules_category(),
+        _database_category(),
+        _authentication_category(),
+        _security_details_category(),
+        _integrations_category(),
+        _observability_category(),
+        _ports_category(),
+        _localstack_category(),
+        _artifactory_category(),
+        _mcp_marketplace_category(),
+        _project_metadata_category(),
+    ]
+
+
+def _node_specific_category() -> dict:
+    """Categoria especifica para Node.js/Express."""
+    return {
+        "name": "node_specific",
+        "label": "Configuracion Node.js",
+        "fields": [
+            {
+                "key": "typescript_strict",
+                "label": "TypeScript strict mode",
+                "type": "boolean",
+                "default": True,
+                "description": (
+                    "strict:true en tsconfig. Default recomendado. "
+                    "Desactivar solo si hay razon tecnica justificada."
+                ),
+            },
+            {
+                "key": "use_husky",
+                "label": "Incluir Husky + lint-staged (pre-commit hooks)",
+                "type": "boolean",
+                "default": True,
+                "description": (
+                    "Si se habilita: ESLint + Prettier corren automaticamente en cada commit "
+                    "sobre los archivos staged. Previene que codigo con errores de lint llegue al PR. "
+                    "Si se deshabilita: el linting solo ocurre en CI (pipeline) o manualmente. "
+                    "Codigo con errores podria llegar al PR y ser rechazado alli."
+                ),
+            },
+            {
+                "key": "npm_scope",
+                "label": "Scope npm (ej: @bolivar)",
+                "type": "string",
+                "required": False,
+                "default": None,
+                "description": (
+                    "Si se indica, el package.json usa ese scope. Si no, queda sin scope."
+                ),
+            },
+            {
+                "key": "use_npmrc",
+                "label": "Generar .npmrc con registry Artifactory",
+                "type": "boolean",
+                "default": False,
+                "description": (
+                    "Genera .npmrc apuntando a Artifactory institucional. "
+                    "Activar si el proyecto usa dependencias privadas @bolivar."
+                ),
+            },
+        ],
+    }
+
+
+def _python_specific_category() -> dict:
+    """Categoria especifica para Python/FastAPI."""
+    return {
+        "name": "python_specific",
+        "label": "Configuracion Python",
+        "fields": [
+            {
+                "key": "mypy_strict",
+                "label": "mypy strict mode",
+                "type": "boolean",
+                "default": True,
+                "description": (
+                    "mypy --strict en config. Default recomendado. "
+                    "Desactivar solo si hay razon tecnica justificada."
+                ),
+            },
+            {
+                "key": "use_pre_commit",
+                "label": "Incluir pre-commit hooks (ruff + mypy en staged files)",
+                "type": "boolean",
+                "default": True,
+                "description": (
+                    "Si se habilita: ruff + mypy corren automaticamente en cada commit "
+                    "sobre los archivos staged. Previene que codigo con errores llegue al PR. "
+                    "Si se deshabilita: lint y type-check solo ocurren en CI o manualmente."
+                ),
+            },
         ],
     }
 
@@ -51,20 +151,21 @@ def _project_identity_category() -> dict:
             },
             {
                 "key": "group_id",
-                "label": "Grupo Gradle/Maven",
+                "label": "Grupo Gradle/Maven (solo Java)",
                 "type": "string",
-                "required": True,
+                "required": False,
                 "default": "com.bolivar.comunes",
                 "example": "com.bolivar.comunes",
+                "description": "Aplica solo para stack java-spring-boot.",
             },
             {
                 "key": "context_path",
-                "label": "Context-path del servlet",
+                "label": "Context-path / base path del API",
                 "type": "string",
                 "required": True,
                 "pattern": "^/[a-z_][a-z0-9_]*$",
                 "example": "/gestion_polizas",
-                "description": "Path base del servlet. Sin /api (los controllers lo agregan)",
+                "description": "Path base del API. Sin /api (los controllers/routers lo agregan)",
             },
             {
                 "key": "api_description",
@@ -90,8 +191,8 @@ def _domain_modules_category() -> dict:
         "name": "domain_modules",
         "label": "Modulos de Dominio (entidades y CRUDs)",
         "description": (
-            "Cada modulo genera un CRUD REST completo: controller, DTOs, "
-            "service (interface + impl), repository, specification, entity y tests."
+            "Cada modulo genera un CRUD REST completo: controller/router, DTOs/schemas, "
+            "service, repository, model/entity y tests."
         ),
         "fields": [
             {
@@ -404,7 +505,8 @@ def _ports_category() -> dict:
         "label": "Puertos Locales",
         "description": (
             "Puertos para evitar colisiones si hay otros MS corriendo en la misma maquina. "
-            "Si no se cambian, se usan los defaults."
+            "Si no se cambian, se usan los defaults. "
+            "Defaults: Java=8080, Node=3000, Python=8000."
         ),
         "fields": [
             {
@@ -413,7 +515,7 @@ def _ports_category() -> dict:
                 "type": "integer",
                 "required": False,
                 "default": 8080,
-                "description": "Cambiar si otro MS ya usa 8080 (ej: 8081, 8082).",
+                "description": "Default segun stack: Java=8080, Node=3000, Python=8000. Cambiar si hay colision.",
             },
             {
                 "key": "localstack_port",
@@ -507,7 +609,7 @@ def _project_metadata_category() -> dict:
                 "required": False,
                 "default": ["es"],
                 "example": ["es", "en"],
-                "description": "Idiomas para mensajes de error/validacion. Default: solo español.",
+                "description": "Idiomas para mensajes de error/validacion. Default: solo espanol.",
             },
             {
                 "key": "cache",
@@ -525,7 +627,7 @@ def _project_metadata_category() -> dict:
                 "label": "Perfil de imagen Docker",
                 "type": "string",
                 "required": False,
-                "default": "java-standard",
+                "default": None,
                 "description": "Define que incluye la imagen Docker. Se indexa en project.json.",
                 "example": "java-redis",
             },

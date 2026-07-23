@@ -1,0 +1,56 @@
+# ============================================================
+# Multi-stage Dockerfile — {{ project_name }}
+# Stack: Python 3.12 + FastAPI + uv
+# ============================================================
+
+# --- Stage 1: Build dependencies ---
+FROM python:3.12-slim AS builder
+
+WORKDIR /app
+
+# Instalar uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Copiar archivos de dependencias primero (caching)
+COPY pyproject.toml uv.lock* ./
+
+# Instalar dependencias (sin dev)
+RUN uv sync --no-dev --frozen
+
+# --- Stage 2: Production ---
+FROM python:3.12-slim AS runtime
+
+WORKDIR /app
+
+# Labels
+LABEL maintainer="Seguros Bolivar"
+LABEL service="{{ project_name }}"
+
+# Crear usuario no-root
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
+# Copiar virtual env desde builder
+COPY --from=builder /app/.venv /app/.venv
+
+# Copiar fuentes
+COPY src/ ./src/
+COPY api_spec.yaml ./
+
+# Path del virtualenv
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH="/app"
+ENV PYTHONUNBUFFERED=1
+
+# Ownership al usuario no-root
+RUN chown -R appuser:appgroup /app
+USER appuser
+
+# Puerto de la aplicacion
+EXPOSE {{ app_port }}
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:{{ app_port }}{{ context_path }}/api/v1/health')" || exit 1
+
+# Entrypoint
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "{{ app_port }}"]

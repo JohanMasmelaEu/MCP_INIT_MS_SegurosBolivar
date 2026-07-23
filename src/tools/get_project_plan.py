@@ -2,6 +2,9 @@
 
 from src.models.project_config import AuthStrategy, ProjectConfig
 
+# Mapeo de stack a funcion constructora de file tree
+_FILE_TREE_BUILDERS = {}
+
 
 def handle_get_project_plan(config_dict: dict) -> dict:
     """Genera el plan de archivos y carpetas a crear.
@@ -26,6 +29,7 @@ def handle_get_project_plan(config_dict: dict) -> dict:
 
     return {
         "project_name": config.project_name,
+        "stack": config.stack,
         "target_directory": config.project_name,
         "total_files": len(files),
         "total_directories": len(set(f["path"].rsplit("/", 1)[0] for f in files if "/" in f["path"])),
@@ -36,7 +40,20 @@ def handle_get_project_plan(config_dict: dict) -> dict:
 
 
 def _build_file_tree(config: ProjectConfig) -> list[dict]:
-    """Construye la lista de archivos que se generarian."""
+    """Construye la lista de archivos que se generarian, delegando al stack."""
+    stack = config.stack
+    if stack == "java-spring-boot":
+        return _build_java_file_tree(config)
+    elif stack == "node-express":
+        return _build_node_file_tree(config)
+    elif stack == "python-fastapi":
+        return _build_python_file_tree(config)
+    else:
+        return [_file("ERROR", f"Stack '{stack}' no tiene file tree definido.")]
+
+
+def _build_java_file_tree(config: ProjectConfig) -> list[dict]:
+    """Construye la lista de archivos para el stack Java/Spring Boot."""
     p = config.project_name
     pkg = config.base_package_path
     files = []
@@ -216,9 +233,293 @@ def _build_file_tree(config: ProjectConfig) -> list[dict]:
     return files
 
 
+def _build_node_file_tree(config: ProjectConfig) -> list[dict]:
+    """Construye la lista de archivos para el stack Node/Express/TypeScript."""
+    p = config.project_name
+    files = []
+
+    # --- Root config files ---
+    files.extend([
+        _file(f"{p}/package.json", "Package.json con dependencias condicionales por auth/cache"),
+        _file(f"{p}/tsconfig.json", f"TypeScript config (strict={config.typescript_strict})"),
+        _file(f"{p}/vitest.config.ts", "Vitest config con coverage v8"),
+        _file(f"{p}/eslint.config.mjs", "ESLint v9 flat config"),
+        _file(f"{p}/.prettierrc", "Prettier config"),
+    ])
+
+    # --- Condicionales root ---
+    if config.use_npmrc:
+        files.append(_file(f"{p}/.npmrc", "Registry Artifactory institucional"))
+    if config.use_husky:
+        files.append(_file(f"{p}/.husky/pre-commit", "Husky pre-commit: lint-staged"))
+
+    # --- Git ---
+    files.extend([
+        _file(f"{p}/.gitignore", "Exclusiones: node_modules, dist, .env, coverage"),
+        _file(f"{p}/.gitattributes", "Normalizacion de line endings"),
+    ])
+
+    # --- src/ base ---
+    files.extend([
+        _file(f"{p}/src/app.ts", "Express app config con middlewares condicionales"),
+        _file(f"{p}/src/server.ts", "Entry point: listen + graceful shutdown"),
+    ])
+
+    # --- src/config/ ---
+    files.extend([
+        _file(f"{p}/src/config/index.ts", "Zod schema para env vars + config export"),
+        _file(f"{p}/src/config/database.ts", "Pool pg + Drizzle client"),
+        _file(f"{p}/src/config/logger.ts", "Pino instance con correlation-id"),
+        _file(f"{p}/src/config/security.ts", "Passport strategies condicionales por auth_strategy"),
+    ])
+
+    # --- src/commons/ ---
+    files.extend([
+        _file(f"{p}/src/commons/api-response.dto.ts", "Interface respuesta API estandar {codigo, mensaje, data}"),
+        _file(f"{p}/src/commons/pagination.dto.ts", "DTO paginacion {content, page, size, totalPages, totalElements}"),
+        _file(f"{p}/src/commons/audit.mixin.ts", "Mixin auditoria: creadoPor, fechaCreacion, etc."),
+    ])
+
+    # --- src/middleware/ ---
+    files.extend([
+        _file(f"{p}/src/middleware/error-handler.ts", "Error handler centralizado"),
+        _file(f"{p}/src/middleware/correlation-id.ts", "Middleware correlation-id con AsyncLocalStorage"),
+        _file(f"{p}/src/middleware/request-logger.ts", "Logger de requests con Pino"),
+        _file(f"{p}/src/middleware/validate.ts", "Middleware validacion Zod"),
+        _file(f"{p}/src/middleware/auth.ts", "Middleware auth condicional por auth_strategy"),
+    ])
+
+    # --- src/errors/ ---
+    files.extend([
+        _file(f"{p}/src/errors/bolivar-business.error.ts", "Error de negocio con codigo y tipo"),
+        _file(f"{p}/src/errors/error-types.enum.ts", "Enum: TECNICO | NEGOCIO"),
+    ])
+
+    # --- src/utils/ ---
+    files.extend([
+        _file(f"{p}/src/utils/data-sanitizer.ts", "Sanitizacion XSS de payloads"),
+        _file(f"{p}/src/utils/date.utils.ts", "Utilidades de fecha ISO-8601"),
+    ])
+
+    # --- Modulos de dominio ---
+    for module in config.modules:
+        mod = module.module_name
+        files.extend([
+            _file(f"{p}/src/{mod}/{mod}.controller.ts", f"Router CRUD REST para {module.entity_name}"),
+            _file(f"{p}/src/{mod}/{mod}.service.ts", f"Servicio de negocio para {module.entity_name}"),
+            _file(f"{p}/src/{mod}/{mod}.repository.ts", f"Repository Drizzle para {module.entity_name}"),
+            _file(f"{p}/src/{mod}/{mod}.schema.ts", f"Drizzle table definition para {module.table_name}"),
+            _file(f"{p}/src/{mod}/dto/crear.dto.ts", "DTO creacion con Zod"),
+            _file(f"{p}/src/{mod}/dto/actualizar.dto.ts", "DTO actualizacion con Zod"),
+            _file(f"{p}/src/{mod}/dto/filtros.dto.ts", "DTO filtros paginados con Zod"),
+            _file(f"{p}/src/{mod}/dto/response.dto.ts", "DTO respuesta"),
+            _file(f"{p}/src/{mod}/tests/{mod}.service.test.ts", "Test unitario servicio con vi.mock"),
+            _file(f"{p}/src/{mod}/tests/{mod}.controller.test.ts", "Test integracion con supertest"),
+        ])
+
+    # --- tests/helpers ---
+    files.append(_file(f"{p}/tests/helpers/test-app.ts", "Express app sin listen (para supertest)"))
+
+    # --- Infraestructura ---
+    files.extend([
+        _file(f"{p}/Dockerfile", "Multi-stage: build (npm ci + tsc) + runtime (node:22-alpine)"),
+        _file(f"{p}/docker-compose.yml", "LocalStack + Redis(condicional) + DD Agent + App"),
+        _file(f"{p}/scripts/seed-localstack-ssm.sh", "Semilla parametros SSM en LocalStack"),
+        _file(f"{p}/.env.sample", "Template de variables de entorno"),
+        _file(f"{p}/.env", "Variables de entorno locales (gitignored)"),
+    ])
+
+    if config.auth_strategy.value == "oauth2-resource-server":
+        files.append(_file(f"{p}/config/mock-oauth-config.json", "Config Mock OAuth Server"))
+
+    # --- CI/CD ---
+    files.extend([
+        _file(f"{p}/.github/workflows/pipeline.yaml", "CI/CD push: build + test + lint + Docker"),
+        _file(f"{p}/.github/CODEOWNERS", "Code owners del repositorio"),
+        _file(f"{p}/.github/pull_request_template.md", "Template de PR"),
+    ])
+
+    # --- Documentacion ---
+    files.extend([
+        _file(f"{p}/README.md", "README del proyecto con instrucciones completas"),
+        _file(f"{p}/api_spec.yaml", "OpenAPI 3.x spec base"),
+    ])
+
+    # --- Kiro context ---
+    files.extend([
+        _file(f"{p}/.kiro/project.json", "Metadato del proyecto: stack, cache, i18n, dockerProfile"),
+        _file(f"{p}/.kiro/steering/00-org-conventions.md", "Convenciones organizacionales"),
+        _file(f"{p}/.kiro/steering/01-architecture.md", "Arquitectura backend"),
+        _file(f"{p}/.kiro/steering/02-security.md", "Seguridad: Zero Trust, headers, secrets"),
+        _file(f"{p}/.kiro/steering/03-code-style.md", "Codigo limpio: SOLID, funciones"),
+        _file(f"{p}/.kiro/steering/04-testing-standards.md", "Testing: 80% coverage, Given/When/Then"),
+        _file(f"{p}/.kiro/steering/05-responsible-ai-use.md", "Uso responsable IA"),
+        _file(f"{p}/.kiro/steering/06-data-access.md", "Acceso datos: ORM obligatorio"),
+        _file(f"{p}/.kiro/steering/07-error-handling.md", "Excepciones: cero 500"),
+        _file(f"{p}/.kiro/steering/08-observability.md", "Observabilidad: logs, masking, correlation-id"),
+        _file(f"{p}/.kiro/steering/10-stack-node.md", "Stack Node: Node.js 22, Express, TypeScript, Drizzle"),
+        _file(f"{p}/.kiro/hooks/pre-write-gate.json", "Gate pre-escritura"),
+        _file(f"{p}/.kiro/hooks/responsible-use.json", "Validacion prompt"),
+        _file(f"{p}/.kiro/hooks/code-review-gate.json", "Review post-escritura"),
+        _file(f"{p}/.kiro/hooks/test-coverage-gate.json", "Verificacion tests"),
+        _file(f"{p}/.kiro/hooks/build-validate.json", "Lint al guardar (npm run lint)"),
+        _file(f"{p}/.kiro/hooks/integrity-check.json", "Verificar hooks al iniciar sesion"),
+        _file(f"{p}/.kiro/hooks/summary-on-completion.json", "Resumen al finalizar sesion"),
+        _file(f"{p}/.kiro/changelogs/changelog-develop.md", "Changelog inicial"),
+    ])
+
+    return files
+
+
+def _build_python_file_tree(config: ProjectConfig) -> list[dict]:
+    """Construye la lista de archivos para el stack Python/FastAPI."""
+    p = config.project_name
+    files = []
+
+    # --- Root config files ---
+    files.append(_file(f"{p}/pyproject.toml", "Config: deps condicionales, ruff, mypy, pytest"))
+
+    # --- Condicionales root ---
+    if config.use_pre_commit:
+        files.append(_file(f"{p}/.pre-commit-config.yaml", "Pre-commit hooks: ruff + mypy"))
+
+    # --- Git ---
+    files.append(_file(f"{p}/.gitignore", "Exclusiones: __pycache__, .venv, dist, .env, .pytest_cache"))
+
+    # --- src/ base ---
+    files.extend([
+        _file(f"{p}/src/__init__.py", "Package init"),
+        _file(f"{p}/src/main.py", "App factory con lifespan, include_router, middleware condicional"),
+    ])
+
+    # --- src/config/ ---
+    files.extend([
+        _file(f"{p}/src/config/__init__.py", "Package init"),
+        _file(f"{p}/src/config/settings.py", "Pydantic Settings (env vars)"),
+        _file(f"{p}/src/config/database.py", "AsyncEngine + AsyncSession factory"),
+        _file(f"{p}/src/config/logging.py", "structlog config con correlation-id"),
+        _file(f"{p}/src/config/security.py", "JWT decode, auth dependencies por auth_strategy"),
+    ])
+
+    # --- src/commons/ ---
+    files.extend([
+        _file(f"{p}/src/commons/__init__.py", "Package init"),
+        _file(f"{p}/src/commons/api_response.py", "Modelo respuesta API {codigo, mensaje, data}"),
+        _file(f"{p}/src/commons/pagination.py", "Modelo paginacion {content, page, size, total_pages, total_elements}"),
+        _file(f"{p}/src/commons/audit_mixin.py", "Mixin SQLAlchemy: created_by, created_at, etc."),
+    ])
+
+    # --- src/middleware/ ---
+    files.extend([
+        _file(f"{p}/src/middleware/__init__.py", "Package init"),
+        _file(f"{p}/src/middleware/correlation_id.py", "Middleware correlation-id con contextvars"),
+        _file(f"{p}/src/middleware/error_handler.py", "Exception handler centralizado"),
+        _file(f"{p}/src/middleware/request_logger.py", "Logger de requests con structlog"),
+        _file(f"{p}/src/middleware/security_headers.py", "Middleware security headers (HSTS, X-Content-Type-Options)"),
+    ])
+
+    # --- src/errors/ ---
+    files.extend([
+        _file(f"{p}/src/errors/__init__.py", "Package init"),
+        _file(f"{p}/src/errors/bolivar_business_error.py", "Excepcion de negocio con codigo y tipo"),
+        _file(f"{p}/src/errors/error_types.py", "Enum: TECNICO | NEGOCIO"),
+    ])
+
+    # --- src/utils/ ---
+    files.extend([
+        _file(f"{p}/src/utils/__init__.py", "Package init"),
+        _file(f"{p}/src/utils/data_sanitizer.py", "Sanitizacion XSS de payloads"),
+        _file(f"{p}/src/utils/date_utils.py", "Utilidades de fecha ISO-8601"),
+    ])
+
+    # --- Modulos de dominio ---
+    for module in config.modules:
+        mod = module.module_name
+        files.extend([
+            _file(f"{p}/src/{mod}/__init__.py", "Package init"),
+            _file(f"{p}/src/{mod}/router.py", f"Router CRUD REST para {module.entity_name}"),
+            _file(f"{p}/src/{mod}/service.py", f"Servicio de negocio para {module.entity_name}"),
+            _file(f"{p}/src/{mod}/repository.py", f"Repository SQLAlchemy async para {module.entity_name}"),
+            _file(f"{p}/src/{mod}/models.py", f"SQLAlchemy model para {module.table_name}"),
+            _file(f"{p}/src/{mod}/schemas/__init__.py", "Package init"),
+            _file(f"{p}/src/{mod}/schemas/crear.py", "Schema Pydantic creacion"),
+            _file(f"{p}/src/{mod}/schemas/actualizar.py", "Schema Pydantic actualizacion"),
+            _file(f"{p}/src/{mod}/schemas/filtros.py", "Schema Pydantic filtros paginados"),
+            _file(f"{p}/src/{mod}/schemas/response.py", "Schema Pydantic respuesta"),
+            _file(f"{p}/src/{mod}/tests/__init__.py", "Package init"),
+            _file(f"{p}/src/{mod}/tests/test_service.py", "Test unitario servicio con AsyncMock"),
+            _file(f"{p}/src/{mod}/tests/test_router.py", "Test integracion con httpx"),
+        ])
+
+    # --- tests/ base ---
+    files.extend([
+        _file(f"{p}/tests/__init__.py", "Package init"),
+        _file(f"{p}/tests/conftest.py", "Fixtures: app, client httpx, AsyncSession"),
+        _file(f"{p}/tests/factories/__init__.py", "Package init factories"),
+    ])
+
+    # --- Infraestructura ---
+    files.extend([
+        _file(f"{p}/Dockerfile", "Multi-stage: uv build deps + python:3.12-slim runtime"),
+        _file(f"{p}/docker-compose.yml", "LocalStack + Redis(condicional) + DD Agent + App"),
+        _file(f"{p}/scripts/seed-localstack-ssm.sh", "Semilla parametros SSM en LocalStack"),
+        _file(f"{p}/.env.sample", "Template de variables de entorno"),
+        _file(f"{p}/.env", "Variables de entorno locales (gitignored)"),
+    ])
+
+    if config.auth_strategy.value == "oauth2-resource-server":
+        files.append(_file(f"{p}/config/mock-oauth-config.json", "Config Mock OAuth Server"))
+
+    # --- CI/CD ---
+    files.extend([
+        _file(f"{p}/.github/workflows/pipeline.yaml", "CI/CD push: ruff + mypy + pytest + Docker"),
+        _file(f"{p}/.github/CODEOWNERS", "Code owners del repositorio"),
+        _file(f"{p}/.github/pull_request_template.md", "Template de PR"),
+    ])
+
+    # --- Documentacion ---
+    files.extend([
+        _file(f"{p}/README.md", "README del proyecto con instrucciones completas"),
+        _file(f"{p}/api_spec.yaml", "OpenAPI 3.x spec base"),
+    ])
+
+    # --- Kiro context ---
+    files.extend([
+        _file(f"{p}/.kiro/project.json", "Metadato del proyecto: stack, cache, i18n, dockerProfile"),
+        _file(f"{p}/.kiro/steering/00-org-conventions.md", "Convenciones organizacionales"),
+        _file(f"{p}/.kiro/steering/01-architecture.md", "Arquitectura backend"),
+        _file(f"{p}/.kiro/steering/02-security.md", "Seguridad: Zero Trust, headers, secrets"),
+        _file(f"{p}/.kiro/steering/03-code-style.md", "Codigo limpio: SOLID, funciones"),
+        _file(f"{p}/.kiro/steering/04-testing-standards.md", "Testing: 80% coverage, Given/When/Then"),
+        _file(f"{p}/.kiro/steering/05-responsible-ai-use.md", "Uso responsable IA"),
+        _file(f"{p}/.kiro/steering/06-data-access.md", "Acceso datos: ORM obligatorio"),
+        _file(f"{p}/.kiro/steering/07-error-handling.md", "Excepciones: cero 500"),
+        _file(f"{p}/.kiro/steering/08-observability.md", "Observabilidad: logs, masking, correlation-id"),
+        _file(f"{p}/.kiro/steering/10-stack-python.md", "Stack Python: Python 3.12, FastAPI, SQLAlchemy, uv"),
+        _file(f"{p}/.kiro/hooks/pre-write-gate.json", "Gate pre-escritura"),
+        _file(f"{p}/.kiro/hooks/responsible-use.json", "Validacion prompt"),
+        _file(f"{p}/.kiro/hooks/code-review-gate.json", "Review post-escritura"),
+        _file(f"{p}/.kiro/hooks/test-coverage-gate.json", "Verificacion tests"),
+        _file(f"{p}/.kiro/hooks/build-validate.json", "Lint al guardar (ruff check src/)"),
+        _file(f"{p}/.kiro/hooks/integrity-check.json", "Verificar hooks al iniciar sesion"),
+        _file(f"{p}/.kiro/hooks/summary-on-completion.json", "Resumen al finalizar sesion"),
+        _file(f"{p}/.kiro/changelogs/changelog-develop.md", "Changelog inicial"),
+    ])
+
+    return files
+
+
 def _build_decisions(config: ProjectConfig) -> list[str]:
     """Lista de decisiones arquitectonicas tomadas."""
     decisions = []
+
+    # Stack
+    stack_labels = {
+        "java-spring-boot": "Java 21 + Spring Boot 4.x + Gradle 9.x",
+        "node-express": "Node.js 22 + Express 4.x + TypeScript 5.x",
+        "python-fastapi": "Python 3.12 + FastAPI + uv",
+    }
+    decisions.append(f"Stack: {stack_labels.get(config.stack, config.stack)}")
 
     auth_labels = {
         AuthStrategy.OAUTH2_RESOURCE_SERVER: "OAuth2 Resource Server con JWT validation local",
@@ -266,18 +567,40 @@ def _build_decisions(config: ProjectConfig) -> list[str]:
 
 
 def _build_next_steps(config: ProjectConfig) -> list[str]:
-    """Pasos siguientes despues de la generacion."""
-    steps = [
-        f"1. Copiar development/.env.sample a .env y configurar ARTIFACTORY_USER / ARTIFACTORY_PASSWORD",
-        f"2. Levantar infraestructura: cd {config.project_name}/development/docker-local-ms && docker compose --env-file ../../.env up -d",
-        f"3. Verificar Swagger UI: http://localhost:8080{config.context_path}/swagger-ui.html",
-        f"4. Verificar health: http://localhost:8080{config.context_path}/actuator/health",
-    ]
+    """Pasos siguientes despues de la generacion, adaptados por stack."""
+    stack = config.stack
+    port = config.app_port
+
+    if stack == "java-spring-boot":
+        steps = [
+            "1. Copiar development/.env.sample a .env y configurar ARTIFACTORY_USER / ARTIFACTORY_PASSWORD",
+            f"2. Levantar infraestructura: cd {config.project_name}/development/docker-local-ms && docker compose --env-file ../../.env up -d",
+            f"3. Verificar Swagger UI: http://localhost:{port}{config.context_path}/swagger-ui.html",
+            f"4. Verificar health: http://localhost:{port}{config.context_path}/actuator/health",
+        ]
+    elif stack == "node-express":
+        steps = [
+            "1. Copiar .env.sample a .env y configurar variables",
+            f"2. npm install",
+            f"3. docker compose up -d (LocalStack + dependencias)",
+            f"4. npm run dev",
+            f"5. Verificar health: http://localhost:{port}{config.context_path}/api/v1/health",
+            f"6. Verificar Swagger UI: http://localhost:{port}{config.context_path}/api-docs",
+        ]
+    elif stack == "python-fastapi":
+        steps = [
+            "1. Copiar .env.sample a .env y configurar variables",
+            f"2. uv sync",
+            f"3. docker compose up -d (LocalStack + dependencias)",
+            f"4. uv run uvicorn src.main:app --reload --port {port}",
+            f"5. Verificar health: http://localhost:{port}{config.context_path}/api/v1/health",
+            f"6. Verificar docs: http://localhost:{port}{config.context_path}/docs",
+        ]
+    else:
+        steps = [f"1. cd {config.project_name} && seguir instrucciones del README"]
 
     if config.observability.datadog_enabled:
-        steps.append("5. Verificar Datadog Agent: docker logs <ms>-dd-agent | grep 'Trace received'")
-
-    steps.append(f"{'6' if config.observability.datadog_enabled else '5'}. Implementar logica de negocio en los ServiceImpl")
+        steps.append(f"{len(steps) + 1}. Verificar Datadog Agent: docker logs <ms>-dd-agent | grep 'Trace received'")
 
     if config.auth_strategy == AuthStrategy.DEFERRED:
         steps.append("PENDIENTE: Definir estrategia de auth y completar SecurityConfig (buscar TODO markers)")

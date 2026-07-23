@@ -1,0 +1,41 @@
+/**
+ * Modelo de respuesta paginada estandar.
+ */
+export interface PaginatedResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalPages: number;
+  totalElements: number;
+}
+
+/**
+ * Parametros de paginacion de entrada.
+ */
+export interface PaginationParams {
+  page: number;
+  size: number;
+}
+
+/**
+ * Construye la respuesta paginada a partir de los datos y el total.
+ */
+export function buildPaginatedResponse<T>(
+  content: T[],
+  totalElements: number,
+  params: PaginationParams,
+): PaginatedResponse<T> {
+  return {
+    content,
+    page: params.page,
+    size: params.size,
+    totalPages: Math.ceil(totalElements / params.size),
+    totalElements,
+  };
+}
+
+/** Tamano maximo de pagina permitido. */
+export const MAX_PAGE_SIZE = 100;
+
+/** Tamano default de pagina. */
+export const DEFAULT_PAGE_SIZE = 20;

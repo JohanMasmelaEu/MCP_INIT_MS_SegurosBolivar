@@ -1,0 +1,112 @@
+# {{ project_name }}
+
+{{ api_description }}
+
+## Stack Tecnologico
+
+| Componente | Version |
+|------------|---------|
+| Python | 3.12+ |
+| FastAPI | 0.115+ |
+| SQLAlchemy | 2.0+ (async) |
+| Pydantic | 2.10+ |
+| uv | latest |
+| pytest | 8.3+ |
+
+## Prerequisitos
+
+- Python >= 3.12
+- uv (package manager)
+- Docker + Docker Compose
+- PostgreSQL 15+ (local o via Docker)
+
+## Inicio Rapido
+
+```bash
+# 1. Instalar dependencias
+uv sync
+
+# 2. Copiar variables de entorno
+cp .env.sample .env
+
+# 3. Levantar infraestructura local
+docker compose up -d
+
+# 4. Ejecutar en modo desarrollo
+uv run uvicorn src.main:app --reload --port {{ app_port }}
+```
+
+## Endpoints
+
+| Metodo | Path | Descripcion |
+|--------|------|-------------|
+| GET | `{{ context_path }}/api/v1/health` | Health check |
+| GET | `{{ context_path }}/docs` | Swagger UI |
+| GET | `{{ context_path }}/redoc` | ReDoc |
+{% for module in modules %}
+| GET | `{{ context_path }}/api/v1/{{ module.resource_path_resolved }}` | Listar {{ module.entity_name }} |
+| POST | `{{ context_path }}/api/v1/{{ module.resource_path_resolved }}` | Crear {{ module.entity_name }} |
+| GET | `{{ context_path }}/api/v1/{{ module.resource_path_resolved }}/{id}` | Obtener {{ module.entity_name }} |
+| PUT | `{{ context_path }}/api/v1/{{ module.resource_path_resolved }}/{id}` | Actualizar {{ module.entity_name }} |
+| DELETE | `{{ context_path }}/api/v1/{{ module.resource_path_resolved }}/{id}` | Eliminar {{ module.entity_name }} |
+{% endfor %}
+
+## Comandos
+
+| Comando | Descripcion |
+|---------|-------------|
+| `uv run uvicorn src.main:app --reload` | Desarrollo con hot-reload |
+| `uv run pytest` | Ejecutar tests |
+| `uv run pytest --cov` | Tests con coverage |
+| `uv run ruff check src/` | Lint |
+| `uv run ruff format src/` | Format |
+| `uv run mypy src/` | Type check |
+
+## Arquitectura
+
+```
+src/
+├── main.py             ← App factory FastAPI
+├── config/             ← Settings, DB, logging, security
+├── commons/            ← ApiResponse, Pagination, AuditMixin
+├── middleware/         ← Correlation-ID, error handler, security headers
+├── errors/             ← BolivarBusinessError, ErrorType
+├── utils/              ← Sanitizacion, utilidades fecha
+{% for module in modules %}
+└── {{ module.module_name }}/           ← Dominio {{ module.entity_name }}
+    ├── router.py
+    ├── service.py
+    ├── repository.py
+    ├── models.py
+    ├── schemas/
+    └── tests/
+{% endfor %}
+```
+
+## Autenticacion
+
+Estrategia: `{{ auth_strategy }}`
+
+{% if auth_strategy == "oauth2-resource-server" %}
+JWT validado localmente contra JWKS del IdP (python-jose). En local se usa mock-oauth-server.
+{% elif auth_strategy == "api-gateway-delegated" %}
+Headers pre-validados por API Gateway (X-User-Id, X-User-Roles).
+{% elif auth_strategy == "machine-to-machine" %}
+Client credentials grant entre servicios.
+{% else %}
+Pendiente de definir. Buscar TODO markers en `src/config/security.py`.
+{% endif %}
+
+## Docker
+
+```bash
+# Build
+docker build -t {{ project_name }} .
+
+# Run
+docker run -p {{ app_port }}:{{ app_port }} --env-file .env {{ project_name }}
+```
+
+## Autores
+
+- Equipo Backend — Seguros Bolivar

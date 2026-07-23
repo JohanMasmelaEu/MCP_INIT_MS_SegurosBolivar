@@ -1,0 +1,23 @@
+---
+inclusion: always
+---
+# Testing
+
+> Generado por MCP_INIT_MS_SegurosBolivar. No editar manualmente.
+
+| Regla | Detalle |
+|-------|---------|
+| Coverage | Mínimo 80%. Build FALLA si < 80% |
+| Patrón | Given/When/Then (Arrange/Act/Assert) |
+| Mocks | Obligatorio para dependencias externas. Nunca backends reales |
+| Error paths | Tests DEBEN cubrir caminos de error |
+| Completitud | Toda feature/fix lleva tests. Tarea no está completa sin tests |
+| Exclusiones | test, models/dto, repository interfaces, config, utils, messages |
+
+## Por stack
+
+| Stack | Framework | Coverage tool |
+|-------|-----------|--------------|
+| Java | JUnit 5 + Mockito + WireMock | JaCoCo |
+| Python | pytest + httpx | pytest-cov |
+| Node | Jest + Supertest | jest --coverage |

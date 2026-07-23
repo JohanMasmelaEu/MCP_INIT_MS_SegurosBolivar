@@ -1,0 +1,19 @@
+"""Categorias de error del sistema."""
+
+from enum import StrEnum
+
+
+class ErrorType(StrEnum):
+    """Clasificacion de errores para logging, alertas y respuestas."""
+
+    NEGOCIO = "NEGOCIO"
+    """Error de logica de negocio (validaciones de reglas)."""
+
+    VALIDACION = "VALIDACION"
+    """Error de validacion de datos de entrada."""
+
+    TECNICO = "TECNICO"
+    """Error tecnico (BD, red, servicios externos)."""
+
+    SEGURIDAD = "SEGURIDAD"
+    """Error de seguridad (auth, permisos)."""

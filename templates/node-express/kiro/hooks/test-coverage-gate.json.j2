@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Verificacion de tests al completar tarea",
+      "trigger": "PostTaskExec",
+      "action": {
+        "type": "agent",
+        "prompt": "Tarea completada. Verifica:\n1. ¿Se crearon/actualizaron archivos de test correspondientes al codigo nuevo?\n2. ¿Los tests cubren el happy path Y los caminos de error?\n3. ¿El patron es Given/When/Then?\n\nSi no hay tests para el codigo nuevo, informa al usuario: 'No se detectan tests para este cambio. El estandar requiere 80% coverage. ¿Quieres que los genere ahora o prefieres continuar sin ellos?'"
+      }
+    }
+  ]
+}

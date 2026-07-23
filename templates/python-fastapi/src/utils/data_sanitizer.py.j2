@@ -1,0 +1,55 @@
+"""Sanitizacion de datos para prevenir XSS."""
+
+import html
+
+
+def sanitize_html(value: str) -> str:
+    """Escapa caracteres HTML peligrosos.
+
+    Args:
+        value: String a sanitizar.
+
+    Returns:
+        String con entidades HTML escapadas.
+    """
+    return html.escape(value, quote=True)
+
+
+def sanitize_dict(data: dict[str, object]) -> dict[str, object]:
+    """Sanitiza recursivamente todos los strings de un diccionario.
+
+    Args:
+        data: Diccionario a sanitizar.
+
+    Returns:
+        Diccionario con strings escapados.
+    """
+    result: dict[str, object] = {}
+    for key, value in data.items():
+        if isinstance(value, str):
+            result[key] = sanitize_html(value)
+        elif isinstance(value, dict):
+            result[key] = sanitize_dict(value)
+        elif isinstance(value, list):
+            result[key] = [
+                sanitize_html(item) if isinstance(item, str) else item
+                for item in value
+            ]
+        else:
+            result[key] = value
+    return result
+
+
+def mask_sensitive(value: str, visible_chars: int = 4) -> str:
+    """Mascara datos sensibles para logging.
+
+    Args:
+        value: Valor a enmascarar.
+        visible_chars: Cantidad de caracteres visibles al final.
+
+    Returns:
+        Valor enmascarado (ej: ****5678).
+    """
+    if len(value) <= visible_chars:
+        return "****"
+    return "****" + value[-visible_chars:]

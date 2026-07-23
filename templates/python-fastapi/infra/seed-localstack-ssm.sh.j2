@@ -1,0 +1,61 @@
+#!/bin/bash
+# ============================================================
+# Seed LocalStack SSM Parameter Store — {{ project_name }}
+# Se ejecuta automaticamente al iniciar LocalStack (init/ready.d/)
+# ============================================================
+
+set -e
+
+ENDPOINT="http://localhost:4566"
+REGION="us-east-1"
+
+echo "=== Seeding SSM Parameter Store para {{ project_name }} ==="
+
+# --- Database parameters ---
+aws --endpoint-url=$ENDPOINT --region=$REGION ssm put-parameter \
+  --name "{{ ssm_app_prefix }}/dev/database/endpoint" \
+  --value "host.docker.internal:{{ db.db_port }}" \
+  --type String --overwrite
+
+aws --endpoint-url=$ENDPOINT --region=$REGION ssm put-parameter \
+  --name "{{ ssm_app_prefix }}/dev/database/dbname" \
+  --value "{{ db.db_name }}" \
+  --type String --overwrite
+
+aws --endpoint-url=$ENDPOINT --region=$REGION ssm put-parameter \
+  --name "{{ ssm_app_prefix }}/dev/database/username" \
+  --value "{{ db.db_user }}" \
+  --type String --overwrite
+
+aws --endpoint-url=$ENDPOINT --region=$REGION ssm put-parameter \
+  --name "{{ ssm_app_prefix }}/dev/database/password" \
+  --value "{{ db.db_password }}" \
+  --type SecureString --overwrite
+
+{% if auth_strategy == "oauth2-resource-server" %}
+# --- OAuth parameters ---
+aws --endpoint-url=$ENDPOINT --region=$REGION ssm put-parameter \
+  --name "{{ ssm_app_prefix }}/dev/oauth/jwks-uri" \
+  --value "http://localhost:8888/default/.well-known/jwks.json" \
+  --type String --overwrite
+
+aws --endpoint-url=$ENDPOINT --region=$REGION ssm put-parameter \
+  --name "{{ ssm_app_prefix }}/dev/oauth/issuer" \
+  --value "http://localhost:8888/default" \
+  --type String --overwrite
+{% endif %}
+
+{% if cache == "redis" %}
+# --- Redis parameters ---
+aws --endpoint-url=$ENDPOINT --region=$REGION ssm put-parameter \
+  --name "{{ ssm_app_prefix }}/dev/redis/host" \
+  --value "localhost" \
+  --type String --overwrite
+
+aws --endpoint-url=$ENDPOINT --region=$REGION ssm put-parameter \
+  --name "{{ ssm_app_prefix }}/dev/redis/port" \
+  --value "{{ redis_port }}" \
+  --type String --overwrite
+{% endif %}
+
+echo "=== SSM Seed completado ==="

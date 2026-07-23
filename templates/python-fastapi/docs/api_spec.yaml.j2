@@ -1,0 +1,185 @@
+openapi: 3.0.3
+info:
+  title: {{ project_name }}
+  description: {{ api_description }}
+  version: {{ api_version }}
+  contact:
+    name: Seguros Bolivar — Backend Team
+
+servers:
+  - url: http://localhost:{{ app_port }}{{ context_path }}
+    description: Local development
+
+paths:
+  /api/v1/health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      tags: [Health]
+      responses:
+        "200":
+          description: Servicio activo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: UP
+                  timestamp:
+                    type: string
+                    format: date-time
+
+{% for module in modules %}
+  /api/v1/{{ module.resource_path_resolved }}:
+    get:
+      summary: Listar {{ module.entity_name }}
+      operationId: listar{{ module.entity_name }}
+      tags: [{{ module.entity_name }}]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Lista paginada
+    post:
+      summary: Crear {{ module.entity_name }}
+      operationId: crear{{ module.entity_name }}
+      tags: [{{ module.entity_name }}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Crear{{ module.entity_name }}"
+      responses:
+        "201":
+          description: Creado exitosamente
+        "422":
+          description: Error de validacion
+
+  /api/v1/{{ module.resource_path_resolved }}/{id}:
+    get:
+      summary: Obtener {{ module.entity_name }} por ID
+      operationId: obtener{{ module.entity_name }}
+      tags: [{{ module.entity_name }}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Encontrado
+        "404":
+          description: No encontrado
+    put:
+      summary: Actualizar {{ module.entity_name }}
+      operationId: actualizar{{ module.entity_name }}
+      tags: [{{ module.entity_name }}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Actualizar{{ module.entity_name }}"
+      responses:
+        "200":
+          description: Actualizado
+        "404":
+          description: No encontrado
+    delete:
+      summary: Eliminar {{ module.entity_name }}
+      operationId: eliminar{{ module.entity_name }}
+      tags: [{{ module.entity_name }}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Eliminado
+        "404":
+          description: No encontrado
+
+{% endfor %}
+components:
+  schemas:
+{% for module in modules %}
+    Crear{{ module.entity_name }}:
+      type: object
+      properties:
+{% for field in module.fields %}
+        {{ field.name }}:
+{% if field.field_type.value == "String" %}
+          type: string
+{% elif field.field_type.value == "Long" or field.field_type.value == "Integer" %}
+          type: integer
+{% elif field.field_type.value == "Boolean" %}
+          type: boolean
+{% elif field.field_type.value == "BigDecimal" %}
+          type: number
+{% elif field.field_type.value == "LocalDate" %}
+          type: string
+          format: date
+{% elif field.field_type.value == "LocalDateTime" %}
+          type: string
+          format: date-time
+{% elif field.field_type.value == "UUID" %}
+          type: string
+          format: uuid
+{% endif %}
+{% endfor %}
+
+    Actualizar{{ module.entity_name }}:
+      type: object
+      properties:
+{% for field in module.fields %}
+        {{ field.name }}:
+{% if field.field_type.value == "String" %}
+          type: string
+{% elif field.field_type.value == "Long" or field.field_type.value == "Integer" %}
+          type: integer
+{% elif field.field_type.value == "Boolean" %}
+          type: boolean
+{% elif field.field_type.value == "BigDecimal" %}
+          type: number
+{% elif field.field_type.value == "LocalDate" %}
+          type: string
+          format: date
+{% elif field.field_type.value == "LocalDateTime" %}
+          type: string
+          format: date-time
+{% elif field.field_type.value == "UUID" %}
+          type: string
+          format: uuid
+{% endif %}
+{% endfor %}
+
+{% endfor %}
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []

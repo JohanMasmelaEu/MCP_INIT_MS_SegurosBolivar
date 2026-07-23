@@ -378,6 +378,7 @@ class JavaSpringBootGenerator(BaseGenerator):
             "build-validate",
             "integrity-check",
             "summary-on-completion",
+            "implementation-tracker",
         ]
         for name in hook_files:
             self._render_write(
@@ -387,6 +388,9 @@ class JavaSpringBootGenerator(BaseGenerator):
 
         # Changelog
         self._render_write("kiro/changelog-develop.md.j2", ".kiro/changelogs/changelog-develop.md")
+
+        # Implementation tracker
+        self._render_write("kiro/implementation-log.json.j2", ".kiro/implementation-log.json", ctx_with_date)
 
         # MCP settings
         self._generate_kiro_mcp_settings()

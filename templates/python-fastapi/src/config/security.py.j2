@@ -1,0 +1,122 @@
+"""Configuracion de seguridad y dependencias de autenticacion."""
+
+{% if auth_strategy == "oauth2-resource-server" %}
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+
+from src.config.settings import get_settings
+
+_bearer_scheme = HTTPBearer(auto_error=False)
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+) -> dict[str, object]:
+    """Dependency que valida el JWT y retorna el usuario.
+
+    Raises:
+        HTTPException 401: Si el token es invalido o ausente.
+    """
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token de autenticacion ausente",
+        )
+
+    settings = get_settings()
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.oauth_secret,
+            algorithms=["HS256", "RS256"],
+            audience=settings.oauth_audience,
+            issuer=settings.oauth_issuer,
+        )
+        return {
+            "id": payload.get("sub"),
+            "roles": payload.get("roles", []),
+            "scope": payload.get("scope", ""),
+        }
+    except JWTError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token invalido",
+        ) from e
+
+{% elif auth_strategy == "api-gateway-delegated" %}
+from fastapi import HTTPException, Request, status
+
+
+async def get_current_user(request: Request) -> dict[str, object]:
+    """Extrae usuario de headers inyectados por API Gateway.
+
+    Headers esperados: X-User-Id, X-User-Roles.
+
+    Raises:
+        HTTPException 401: Si los headers no estan presentes.
+    """
+    user_id = request.headers.get("x-user-id")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Headers de autenticacion ausentes",
+        )
+    return {
+        "id": user_id,
+        "roles": (request.headers.get("x-user-roles") or "").split(","),
+    }
+
+{% elif auth_strategy == "machine-to-machine" %}
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+
+from src.config.settings import get_settings
+
+_bearer_scheme = HTTPBearer(auto_error=False)
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+) -> dict[str, object]:
+    """Verifica token M2M (client_credentials).
+
+    Raises:
+        HTTPException 401: Si el token es invalido o ausente.
+    """
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token ausente",
+        )
+
+    settings = get_settings()
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.oauth_secret if hasattr(settings, "oauth_secret") else "m2m-secret-local",
+            algorithms=["HS256"],
+        )
+        return {
+            "client_id": payload.get("client_id"),
+            "scope": payload.get("scope", ""),
+        }
+    except JWTError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token M2M invalido",
+        ) from e
+
+{% else %}
+from fastapi import Request
+
+
+async def get_current_user(request: Request) -> dict[str, object]:
+    """Auth placeholder (strategy: deferred).
+
+    TODO: Definir estrategia de autenticacion y configurar aqui.
+    Opciones: oauth2-resource-server, api-gateway-delegated, machine-to-machine.
+    """
+    return {"id": "anonymous", "roles": []}
+{% endif %}

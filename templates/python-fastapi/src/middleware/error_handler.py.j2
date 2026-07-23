@@ -1,0 +1,62 @@
+"""Exception handlers globales."""
+
+import structlog
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
+
+from src.errors.bolivar_business_error import BolivarBusinessError
+
+logger = structlog.get_logger(__name__)
+
+
+def register_exception_handlers(app: FastAPI) -> None:
+    """Registra exception handlers en la app FastAPI.
+
+    Args:
+        app: Instancia FastAPI.
+    """
+
+    @app.exception_handler(BolivarBusinessError)
+    async def bolivar_error_handler(_request: Request, exc: BolivarBusinessError) -> JSONResponse:
+        """Maneja errores de negocio conocidos."""
+        return JSONResponse(
+            status_code=exc.http_status,
+            content={"codigo": exc.codigo, "mensaje": exc.mensaje, "data": None},
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
+        """Maneja errores de validacion Pydantic/FastAPI."""
+        errors = [
+            f"{'.'.join(str(loc) for loc in e['loc'])}: {e['msg']}"
+            for e in exc.errors()
+        ]
+        return JSONResponse(
+            status_code=422,
+            content={"codigo": "VALIDACION_ERROR", "mensaje": "; ".join(errors), "data": None},
+        )
+
+    @app.exception_handler(ValidationError)
+    async def pydantic_error_handler(_request: Request, exc: ValidationError) -> JSONResponse:
+        """Maneja errores de validacion Pydantic directos."""
+        return JSONResponse(
+            status_code=422,
+            content={"codigo": "VALIDACION_ERROR", "mensaje": str(exc), "data": None},
+        )
+
+    @app.exception_handler(Exception)
+    async def generic_error_handler(request: Request, exc: Exception) -> JSONResponse:
+        """Maneja errores no controlados. Nunca expone stack traces."""
+        logger.error(
+            "Error no controlado",
+            error=str(exc),
+            path=request.url.path,
+            method=request.method,
+            exc_info=exc,
+        )
+        return JSONResponse(
+            status_code=500,
+            content={"codigo": "ERROR_INTERNO", "mensaje": "Error interno del servidor", "data": None},
+        )

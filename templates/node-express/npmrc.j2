@@ -1,0 +1,24 @@
+# Registry institucional — toda dependencia pasa por Artifactory
+registry={{ artifactory_url }}/api/npm/npm-remote/
+
+# Scopes internos apuntan al registry privado (previene dependency confusion)
+{% if npm_scope %}
+{{ npm_scope }}:registry={{ artifactory_url }}/api/npm/npm-private/
+{% else %}
+@bolivar:registry={{ artifactory_url }}/api/npm/npm-private/
+{% endif %}
+
+# Bloquear scripts de lifecycle (postinstall, preinstall)
+ignore-scripts=true
+
+# Lockfile obligatorio
+package-lock=true
+
+# Audit automatico en cada install
+audit=true
+
+# Sin sponsorship noise
+fund=false
+
+# Nivel de audit que bloquea install
+audit-level=high

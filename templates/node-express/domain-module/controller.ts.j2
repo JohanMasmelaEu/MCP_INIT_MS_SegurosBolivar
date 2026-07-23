@@ -1,0 +1,90 @@
+import { Router, type Request, type Response, type NextFunction } from "express";
+import { {{ m.entity_name }}Service } from "./{{ m.module_name }}.service.js";
+import { crear{{ m.entity_name }}Schema } from "./dto/crear.dto.js";
+import { actualizar{{ m.entity_name }}Schema } from "./dto/actualizar.dto.js";
+import { filtros{{ m.entity_name }}Schema } from "./dto/filtros.dto.js";
+import { validate } from "../middleware/validate.js";
+import { successResponse } from "../commons/api-response.dto.js";
+import { buildPaginatedResponse } from "../commons/pagination.dto.js";
+
+const router = Router();
+const service = new {{ m.entity_name }}Service();
+
+/**
+ * POST / — Crear {{ m.entity_name }}.
+ */
+router.post(
+  "/",
+  validate(crear{{ m.entity_name }}Schema, "body"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const resultado = await service.crear(req.body);
+      res.status(201).json(successResponse(resultado, "{{ m.entity_name }} creado exitosamente"));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * GET / — Listar {{ m.entity_name }} con filtros y paginacion.
+ */
+router.get(
+  "/",
+  validate(filtros{{ m.entity_name }}Schema, "query"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { page, size, ...filtros } = req.query as Record<string, unknown>;
+      const pageNum = Number(page) || 0;
+      const sizeNum = Number(size) || 20;
+
+      const { data, total } = await service.listar(filtros, { page: pageNum, size: sizeNum });
+      const paginado = buildPaginatedResponse(data, total, { page: pageNum, size: sizeNum });
+      res.json(successResponse(paginado));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * GET /:id — Obtener {{ m.entity_name }} por ID.
+ */
+router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const resultado = await service.obtenerPorId(Number(req.params.id));
+    res.json(successResponse(resultado));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * PUT /:id — Actualizar {{ m.entity_name }}.
+ */
+router.put(
+  "/:id",
+  validate(actualizar{{ m.entity_name }}Schema, "body"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const resultado = await service.actualizar(Number(req.params.id), req.body);
+      res.json(successResponse(resultado, "{{ m.entity_name }} actualizado exitosamente"));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * DELETE /:id — Eliminar {{ m.entity_name }}.
+ */
+router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await service.eliminar(Number(req.params.id));
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+export { router as {{ m.module_name }}Router };

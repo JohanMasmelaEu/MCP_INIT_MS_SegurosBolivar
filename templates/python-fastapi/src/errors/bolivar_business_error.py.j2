@@ -1,0 +1,36 @@
+"""Error de negocio custom de Seguros Bolivar."""
+
+from src.errors.error_types import ErrorType
+
+
+class BolivarBusinessError(Exception):
+    """Error de negocio con codigo, categoria y HTTP status.
+
+    Attributes:
+        codigo: Codigo de error (ej: ENTIDAD_NO_ENCONTRADA).
+        mensaje: Mensaje descriptivo.
+        categoria: Tipo de error (NEGOCIO, VALIDACION, TECNICO, SEGURIDAD).
+        http_status: HTTP status code para la respuesta.
+    """
+
+    def __init__(
+        self,
+        *,
+        codigo: str,
+        mensaje: str,
+        categoria: ErrorType,
+        http_status: int,
+    ) -> None:
+        """Inicializa el error de negocio.
+
+        Args:
+            codigo: Codigo identificador del error.
+            mensaje: Mensaje descriptivo del error.
+            categoria: Clasificacion del error.
+            http_status: HTTP status code.
+        """
+        super().__init__(mensaje)
+        self.codigo = codigo
+        self.mensaje = mensaje
+        self.categoria = categoria
+        self.http_status = http_status

@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Lint al guardar archivo Python",
+      "trigger": "PostFileSave",
+      "matcher": "\\.py$",
+      "action": {
+        "type": "command",
+        "command": "uv run ruff check src/"
+      }
+    }
+  ]
+}

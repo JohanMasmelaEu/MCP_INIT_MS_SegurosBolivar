@@ -1,0 +1,16 @@
+# ============================================================
+# CODEOWNERS — {{ project_name }}
+# Define los responsables de revision de codigo por area
+# ============================================================
+
+# Default — todo el repositorio
+* @segurosbolivar/backend-team
+
+# Infraestructura
+Dockerfile @segurosbolivar/devops-team
+docker-compose.yml @segurosbolivar/devops-team
+.github/ @segurosbolivar/devops-team
+
+# Seguridad
+src/config/security.ts @segurosbolivar/security-team
+src/middleware/auth.ts @segurosbolivar/security-team

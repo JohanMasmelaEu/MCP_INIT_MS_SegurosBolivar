@@ -1,0 +1,8 @@
+{
+  "stack": "python-fastapi",
+  "dockerProfile": {{ (c.docker_profile or "python-standard") | tojson }},
+  "cache": {{ (c.cache or "none") | tojson }},
+  "i18n": {{ c.i18n | tojson }},
+  "generatedBy": "mcp-init-ms-segurosbolivar",
+  "createdAt": "{{ now_iso }}"
+}

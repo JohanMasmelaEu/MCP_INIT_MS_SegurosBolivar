@@ -1,0 +1,13 @@
+"""Schemas Pydantic para {{ m.entity_name }}."""
+
+from src.{{ m.module_name }}.schemas.crear import Crear{{ m.entity_name }}Schema
+from src.{{ m.module_name }}.schemas.actualizar import Actualizar{{ m.entity_name }}Schema
+from src.{{ m.module_name }}.schemas.filtros import Filtros{{ m.entity_name }}Schema
+from src.{{ m.module_name }}.schemas.response import {{ m.entity_name }}ResponseSchema
+
+__all__ = [
+    "Crear{{ m.entity_name }}Schema",
+    "Actualizar{{ m.entity_name }}Schema",
+    "Filtros{{ m.entity_name }}Schema",
+    "{{ m.entity_name }}ResponseSchema",
+]

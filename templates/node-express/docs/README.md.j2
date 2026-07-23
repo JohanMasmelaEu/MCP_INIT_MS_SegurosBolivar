@@ -1,0 +1,113 @@
+# {{ project_name }}
+
+{{ api_description }}
+
+## Stack Tecnologico
+
+| Componente | Version |
+|------------|---------|
+| Node.js | 22.x LTS |
+| TypeScript | 5.5+ |
+| Express | 4.21+ |
+| PostgreSQL | 15+ |
+| Drizzle ORM | 0.36+ |
+| Vitest | 2.1+ |
+
+## Prerequisitos
+
+- Node.js >= 22.0.0
+- npm >= 10.0.0
+- Docker + Docker Compose
+- PostgreSQL 15+ (local o via Docker)
+
+## Inicio Rapido
+
+```bash
+# 1. Instalar dependencias
+npm ci
+
+# 2. Copiar variables de entorno
+cp .env.sample .env
+
+# 3. Levantar infraestructura local
+docker compose up -d
+
+# 4. Ejecutar en modo desarrollo
+npm run dev
+```
+
+## Endpoints
+
+| Metodo | Path | Descripcion |
+|--------|------|-------------|
+| GET | `{{ context_path }}/api/v1/health` | Health check |
+| GET | `{{ context_path }}/api-docs` | Swagger UI |
+{% for module in modules %}
+| GET | `{{ context_path }}/api/v1/{{ module.resource_path_resolved }}` | Listar {{ module.entity_name }} |
+| POST | `{{ context_path }}/api/v1/{{ module.resource_path_resolved }}` | Crear {{ module.entity_name }} |
+| GET | `{{ context_path }}/api/v1/{{ module.resource_path_resolved }}/:id` | Obtener {{ module.entity_name }} |
+| PUT | `{{ context_path }}/api/v1/{{ module.resource_path_resolved }}/:id` | Actualizar {{ module.entity_name }} |
+| DELETE | `{{ context_path }}/api/v1/{{ module.resource_path_resolved }}/:id` | Eliminar {{ module.entity_name }} |
+{% endfor %}
+
+## Scripts
+
+| Comando | Descripcion |
+|---------|-------------|
+| `npm run dev` | Desarrollo con hot-reload (tsx watch) |
+| `npm run build` | Compilar TypeScript |
+| `npm start` | Ejecutar build compilado |
+| `npm test` | Ejecutar tests |
+| `npm run test:coverage` | Tests con reporte de coverage |
+| `npm run lint` | Ejecutar ESLint |
+| `npm run format` | Formatear con Prettier |
+
+## Arquitectura
+
+```
+src/
+├── app.ts              ← Configuracion Express
+├── server.ts           ← Entry point
+├── config/             ← Variables de entorno, DB, logger, security
+├── commons/            ← DTOs transversales (ApiResponse, Pagination)
+├── middleware/         ← Error handler, correlation-id, auth, validate
+├── errors/             ← Errores custom de negocio
+├── utils/              ← Sanitizacion, utilidades fecha
+{% for module in modules %}
+└── {{ module.module_name }}/           ← Dominio {{ module.entity_name }}
+    ├── {{ module.module_name }}.controller.ts
+    ├── {{ module.module_name }}.service.ts
+    ├── {{ module.module_name }}.repository.ts
+    ├── {{ module.module_name }}.schema.ts
+    ├── dto/
+    └── tests/
+{% endfor %}
+```
+
+## Autenticacion
+
+Estrategia: `{{ auth_strategy }}`
+
+{% if auth_strategy == "oauth2-resource-server" %}
+JWT validado localmente contra JWKS del IdP. En local se usa mock-oauth-server.
+{% elif auth_strategy == "api-gateway-delegated" %}
+Headers pre-validados por API Gateway (X-User-Id, X-User-Roles).
+{% elif auth_strategy == "machine-to-machine" %}
+Client credentials grant entre servicios.
+{% else %}
+Pendiente de definir. Buscar TODO markers en `src/config/security.ts`.
+{% endif %}
+
+## Docker
+
+```bash
+# Build
+docker build -t {{ project_name }} .
+
+# Run
+docker run -p {{ app_port }}:{{ app_port }} --env-file .env {{ project_name }}
+```
+
+## Autores
+
+- Equipo Backend — Seguros Bolivar

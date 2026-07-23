@@ -1,0 +1,53 @@
+"""Schema de creacion para {{ m.entity_name }}."""
+
+from pydantic import BaseModel, Field
+
+
+class Crear{{ m.entity_name }}Schema(BaseModel):
+    """Datos requeridos para crear un {{ m.entity_name }}."""
+
+{% for field in m.fields %}
+{% if field.field_type.value == "String" %}
+{% if field.nullable %}
+    {{ field.name }}: str | None = Field(default=None{% if field.length %}, max_length={{ field.length }}{% endif %}{% if field.description %}, description="{{ field.description }}"{% endif %})
+{% else %}
+    {{ field.name }}: str = Field(min_length=1{% if field.length %}, max_length={{ field.length }}{% endif %}{% if field.description %}, description="{{ field.description }}"{% endif %})
+{% endif %}
+{% elif field.field_type.value == "Long" or field.field_type.value == "Integer" %}
+{% if field.nullable %}
+    {{ field.name }}: int | None = Field(default=None{% if field.description %}, description="{{ field.description }}"{% endif %})
+{% else %}
+    {{ field.name }}: int = Field({% if field.description %}description="{{ field.description }}"{% endif %})
+{% endif %}
+{% elif field.field_type.value == "Boolean" %}
+{% if field.nullable %}
+    {{ field.name }}: bool | None = Field(default=None{% if field.description %}, description="{{ field.description }}"{% endif %})
+{% else %}
+    {{ field.name }}: bool = Field({% if field.description %}description="{{ field.description }}"{% endif %})
+{% endif %}
+{% elif field.field_type.value == "BigDecimal" %}
+{% if field.nullable %}
+    {{ field.name }}: float | None = Field(default=None, gt=0{% if field.description %}, description="{{ field.description }}"{% endif %})
+{% else %}
+    {{ field.name }}: float = Field(gt=0{% if field.description %}, description="{{ field.description }}"{% endif %})
+{% endif %}
+{% elif field.field_type.value == "LocalDate" %}
+{% if field.nullable %}
+    {{ field.name }}: str | None = Field(default=None{% if field.description %}, description="{{ field.description }}"{% endif %})
+{% else %}
+    {{ field.name }}: str = Field({% if field.description %}description="{{ field.description }}"{% endif %})
+{% endif %}
+{% elif field.field_type.value == "LocalDateTime" %}
+{% if field.nullable %}
+    {{ field.name }}: str | None = Field(default=None{% if field.description %}, description="{{ field.description }}"{% endif %})
+{% else %}
+    {{ field.name }}: str = Field({% if field.description %}description="{{ field.description }}"{% endif %})
+{% endif %}
+{% elif field.field_type.value == "UUID" %}
+{% if field.nullable %}
+    {{ field.name }}: str | None = Field(default=None{% if field.description %}, description="{{ field.description }}"{% endif %})
+{% else %}
+    {{ field.name }}: str = Field({% if field.description %}description="{{ field.description }}"{% endif %})
+{% endif %}
+{% endif %}
+{% endfor %}

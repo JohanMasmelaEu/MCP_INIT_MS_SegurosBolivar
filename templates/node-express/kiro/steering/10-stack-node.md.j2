@@ -1,0 +1,37 @@
+---
+inclusion: always
+---
+# Stack Node.js/Express/TypeScript
+
+> Generado por MCP_INIT_MS_SegurosBolivar. No editar manualmente.
+
+| Componente | Detalle |
+|-----------|---------|
+| Node.js | 22.x LTS |
+| TypeScript | 5.5+ (strict: {{ typescript_strict }}) |
+| Express | 4.21+ |
+| ORM | Drizzle ORM (type-safe, PostgreSQL) |
+| Validacion | Zod (runtime + tipos) |
+| Docs API | swagger-ui-express + api_spec.yaml |
+| Testing | Vitest + Supertest + nock |
+| Coverage | vitest --coverage v8 (min 80%) |
+| Error handling | BolivarBusinessError + global error handler |
+| Logs | Pino (JSON estructurado) + AsyncLocalStorage (correlation-id) |
+| HTTP Client | fetch nativo (Node 22) |
+| AWS | @aws-sdk/client-ssm |
+| Linting | ESLint v9 flat config + Prettier |
+{% if use_husky %}
+| Pre-commit | Husky + lint-staged |
+{% endif %}
+
+## Reglas criticas
+
+- `strict: true` en tsconfig — no negociable
+- Nunca `any` — usar `unknown` + narrowing
+- Nunca `as` casting salvo en tests o boundaries
+- Zod valida TODA entrada (body, query, params)
+- Nunca `req.body` sin parsear con schema
+- Secrets via env vars / SSM — jamas en codigo
+- `npm ci` en CI, nunca `npm install`
+- Dependencias pinned en lockfile
+- Max ~30 deps de produccion por microservicio

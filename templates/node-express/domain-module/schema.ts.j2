@@ -1,0 +1,36 @@
+import { pgTable, serial, varchar, boolean, integer, numeric, date, timestamp, uuid } from "drizzle-orm/pg-core";
+
+/**
+ * Drizzle schema para tabla {{ m.table_name }}.
+ */
+export const {{ m.module_name }}Table = pgTable("{{ m.table_name | lower }}", {
+  id: serial("id").primaryKey(),
+{% if m.has_cod_field %}
+  cod{{ m.entity_name }}: uuid("cod_{{ m.module_name }}").defaultRandom().notNull().unique(),
+{% endif %}
+{% for field in m.fields %}
+{% if field.field_type.value == "String" %}
+  {{ field.name }}: varchar("{{ field.column_name }}"{% if field.length %}, { length: {{ field.length }} }{% endif %}){% if not field.nullable %}.notNull(){% endif %}{% if field.unique %}.unique(){% endif %},
+{% elif field.field_type.value == "Long" or field.field_type.value == "Integer" %}
+  {{ field.name }}: integer("{{ field.column_name }}"){% if not field.nullable %}.notNull(){% endif %}{% if field.unique %}.unique(){% endif %},
+{% elif field.field_type.value == "Boolean" %}
+  {{ field.name }}: boolean("{{ field.column_name }}"){% if not field.nullable %}.notNull(){% endif %},
+{% elif field.field_type.value == "BigDecimal" %}
+  {{ field.name }}: numeric("{{ field.column_name }}", { precision: 18, scale: 2 }){% if not field.nullable %}.notNull(){% endif %},
+{% elif field.field_type.value == "LocalDate" %}
+  {{ field.name }}: date("{{ field.column_name }}"){% if not field.nullable %}.notNull(){% endif %},
+{% elif field.field_type.value == "LocalDateTime" %}
+  {{ field.name }}: timestamp("{{ field.column_name }}"){% if not field.nullable %}.notNull(){% endif %},
+{% elif field.field_type.value == "UUID" %}
+  {{ field.name }}: uuid("{{ field.column_name }}"){% if not field.nullable %}.notNull(){% endif %}{% if field.unique %}.unique(){% endif %},
+{% endif %}
+{% endfor %}
+  // Auditoria
+  creadoPor: varchar("creado_por", { length: 100 }).notNull().default("system"),
+  fechaCreacion: timestamp("fecha_creacion").notNull().defaultNow(),
+  modificadoPor: varchar("modificado_por", { length: 100 }),
+  fechaModificacion: timestamp("fecha_modificacion"),
+});
+
+export type {{ m.entity_name }} = typeof {{ m.module_name }}Table.$inferSelect;
+export type New{{ m.entity_name }} = typeof {{ m.module_name }}Table.$inferInsert;

@@ -1,0 +1,121 @@
+"""Servicio de negocio para {{ m.entity_name }}."""
+
+from src.commons.pagination import PaginationParams
+from src.errors.bolivar_business_error import BolivarBusinessError
+from src.errors.error_types import ErrorType
+from src.{{ m.module_name }}.repository import {{ m.entity_name }}Repository
+from src.{{ m.module_name }}.schemas.crear import Crear{{ m.entity_name }}Schema
+from src.{{ m.module_name }}.schemas.actualizar import Actualizar{{ m.entity_name }}Schema
+from src.{{ m.module_name }}.schemas.filtros import Filtros{{ m.entity_name }}Schema
+from src.{{ m.module_name }}.schemas.response import {{ m.entity_name }}ResponseSchema
+
+
+class {{ m.entity_name }}Service:
+    """Logica de negocio para {{ m.entity_name }}.
+
+    Orquesta el repository y aplica validaciones de dominio.
+    """
+
+    def __init__(self, repository: {{ m.entity_name }}Repository) -> None:
+        """Inicializa el servicio.
+
+        Args:
+            repository: Repository de {{ m.entity_name }}.
+        """
+        self._repository = repository
+
+    async def crear(self, dto: Crear{{ m.entity_name }}Schema) -> {{ m.entity_name }}ResponseSchema:
+        """Crea un nuevo {{ m.entity_name }}.
+
+        Args:
+            dto: Datos de creacion validados.
+
+        Returns:
+            {{ m.entity_name }} creado como schema de respuesta.
+        """
+        entity = await self._repository.insertar(dto.model_dump())
+        return {{ m.entity_name }}ResponseSchema.model_validate(entity)
+
+    async def listar(
+        self,
+        filtros: Filtros{{ m.entity_name }}Schema,
+        pagination: PaginationParams,
+    ) -> tuple[list[{{ m.entity_name }}ResponseSchema], int]:
+        """Lista {{ m.entity_name }} con filtros y paginacion.
+
+        Args:
+            filtros: Filtros de busqueda.
+            pagination: Parametros de paginacion.
+
+        Returns:
+            Tupla con lista de resultados y total de elementos.
+        """
+        entities, total = await self._repository.listar_con_filtros(filtros, pagination)
+        return [{{ m.entity_name }}ResponseSchema.model_validate(e) for e in entities], total
+
+    async def obtener_por_id(self, item_id: int) -> {{ m.entity_name }}ResponseSchema:
+        """Obtiene un {{ m.entity_name }} por ID.
+
+        Args:
+            item_id: ID del registro.
+
+        Returns:
+            {{ m.entity_name }} como schema de respuesta.
+
+        Raises:
+            BolivarBusinessError: Si no se encuentra el registro.
+        """
+        entity = await self._repository.buscar_por_id(item_id)
+        if not entity:
+            raise BolivarBusinessError(
+                codigo="{{ m.entity_name | upper }}_NO_ENCONTRADO",
+                mensaje=f"{{ m.entity_name }} con id {item_id} no encontrado",
+                categoria=ErrorType.NEGOCIO,
+                http_status=404,
+            )
+        return {{ m.entity_name }}ResponseSchema.model_validate(entity)
+
+    async def actualizar(
+        self, item_id: int, dto: Actualizar{{ m.entity_name }}Schema
+    ) -> {{ m.entity_name }}ResponseSchema:
+        """Actualiza un {{ m.entity_name }} existente.
+
+        Args:
+            item_id: ID del registro.
+            dto: Datos de actualizacion.
+
+        Returns:
+            {{ m.entity_name }} actualizado.
+
+        Raises:
+            BolivarBusinessError: Si no se encuentra el registro.
+        """
+        existing = await self._repository.buscar_por_id(item_id)
+        if not existing:
+            raise BolivarBusinessError(
+                codigo="{{ m.entity_name | upper }}_NO_ENCONTRADO",
+                mensaje=f"{{ m.entity_name }} con id {item_id} no encontrado",
+                categoria=ErrorType.NEGOCIO,
+                http_status=404,
+            )
+        updated = await self._repository.actualizar(item_id, dto.model_dump(exclude_unset=True))
+        return {{ m.entity_name }}ResponseSchema.model_validate(updated)
+
+    async def eliminar(self, item_id: int) -> None:
+        """Elimina un {{ m.entity_name }} por ID.
+
+        Args:
+            item_id: ID del registro.
+
+        Raises:
+            BolivarBusinessError: Si no se encuentra el registro.
+        """
+        existing = await self._repository.buscar_por_id(item_id)
+        if not existing:
+            raise BolivarBusinessError(
+                codigo="{{ m.entity_name | upper }}_NO_ENCONTRADO",
+                mensaje=f"{{ m.entity_name }} con id {item_id} no encontrado",
+                categoria=ErrorType.NEGOCIO,
+                http_status=404,
+            )
+        await self._repository.eliminar(item_id)

@@ -1,0 +1,33 @@
+import type { Request, Response, NextFunction } from "express";
+import { ZodError } from "zod";
+import { BolivarBusinessError } from "../errors/bolivar-business.error.js";
+import { errorResponse } from "../commons/api-response.dto.js";
+import { logger } from "../config/logger.js";
+
+/**
+ * Global error handler.
+ * Nunca expone stack traces al cliente. Detalles solo en logs internos.
+ */
+export function errorHandler(
+  err: Error,
+  _req: Request,
+  res: Response,
+  _next: NextFunction,
+): void {
+  // Error de negocio conocido
+  if (err instanceof BolivarBusinessError) {
+    res.status(err.httpStatus).json(errorResponse(err.codigo, err.mensaje));
+    return;
+  }
+
+  // Error de validacion Zod
+  if (err instanceof ZodError) {
+    const issues = err.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
+    res.status(400).json(errorResponse("VALIDACION_ERROR", issues.join("; ")));
+    return;
+  }
+
+  // Error inesperado — log interno, respuesta generica
+  logger.error({ err, stack: err.stack }, "Error no controlado");
+  res.status(500).json(errorResponse("ERROR_INTERNO", "Error interno del servidor"));
+}

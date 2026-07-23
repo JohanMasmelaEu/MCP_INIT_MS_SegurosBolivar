@@ -1,0 +1,14 @@
+/**
+ * Categorias de error del sistema.
+ * Permite clasificar errores para logging, alertas y respuestas al cliente.
+ */
+export enum ErrorType {
+  /** Error de logica de negocio (validaciones de reglas). */
+  NEGOCIO = "NEGOCIO",
+  /** Error de validacion de datos de entrada. */
+  VALIDACION = "VALIDACION",
+  /** Error tecnico (BD, red, servicios externos). */
+  TECNICO = "TECNICO",
+  /** Error de seguridad (auth, permisos). */
+  SEGURIDAD = "SEGURIDAD",
+}

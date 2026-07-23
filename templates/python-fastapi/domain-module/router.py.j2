@@ -1,0 +1,98 @@
+"""Router CRUD para {{ m.entity_name }}."""
+
+from fastapi import APIRouter, Depends, status
+
+from src.commons.api_response import ApiResponse, success_response
+from src.commons.pagination import PaginatedResponse, PaginationParams, build_paginated_response
+from src.config.database import get_db_session
+from src.config.security import get_current_user
+from src.{{ m.module_name }}.service import {{ m.entity_name }}Service
+from src.{{ m.module_name }}.schemas.crear import Crear{{ m.entity_name }}Schema
+from src.{{ m.module_name }}.schemas.actualizar import Actualizar{{ m.entity_name }}Schema
+from src.{{ m.module_name }}.schemas.filtros import Filtros{{ m.entity_name }}Schema
+from src.{{ m.module_name }}.schemas.response import {{ m.entity_name }}ResponseSchema
+
+router = APIRouter()
+
+
+def _get_service(
+    session=Depends(get_db_session),
+) -> {{ m.entity_name }}Service:
+    """Dependency injection del servicio."""
+    from src.{{ m.module_name }}.repository import {{ m.entity_name }}Repository
+
+    repository = {{ m.entity_name }}Repository(session)
+    return {{ m.entity_name }}Service(repository)
+
+
+@router.post(
+    "/",
+    status_code=status.HTTP_201_CREATED,
+    response_model=ApiResponse[{{ m.entity_name }}ResponseSchema],
+)
+async def crear_{{ m.module_name }}(
+    dto: Crear{{ m.entity_name }}Schema,
+    service: {{ m.entity_name }}Service = Depends(_get_service),
+    _user: dict = Depends(get_current_user),
+) -> ApiResponse[{{ m.entity_name }}ResponseSchema]:
+    """Crea un nuevo {{ m.entity_name }}."""
+    resultado = await service.crear(dto)
+    return success_response(resultado, "{{ m.entity_name }} creado exitosamente")
+
+
+@router.get(
+    "/",
+    response_model=ApiResponse[PaginatedResponse[{{ m.entity_name }}ResponseSchema]],
+)
+async def listar_{{ m.module_name }}(
+    filtros: Filtros{{ m.entity_name }}Schema = Depends(),
+    pagination: PaginationParams = Depends(),
+    service: {{ m.entity_name }}Service = Depends(_get_service),
+    _user: dict = Depends(get_current_user),
+) -> ApiResponse[PaginatedResponse[{{ m.entity_name }}ResponseSchema]]:
+    """Lista {{ m.entity_name }} con filtros y paginacion."""
+    data, total = await service.listar(filtros, pagination)
+    paginado = build_paginated_response(data, total, pagination)
+    return success_response(paginado)
+
+
+@router.get(
+    "/{item_id}",
+    response_model=ApiResponse[{{ m.entity_name }}ResponseSchema],
+)
+async def obtener_{{ m.module_name }}(
+    item_id: int,
+    service: {{ m.entity_name }}Service = Depends(_get_service),
+    _user: dict = Depends(get_current_user),
+) -> ApiResponse[{{ m.entity_name }}ResponseSchema]:
+    """Obtiene un {{ m.entity_name }} por ID."""
+    resultado = await service.obtener_por_id(item_id)
+    return success_response(resultado)
+
+
+@router.put(
+    "/{item_id}",
+    response_model=ApiResponse[{{ m.entity_name }}ResponseSchema],
+)
+async def actualizar_{{ m.module_name }}(
+    item_id: int,
+    dto: Actualizar{{ m.entity_name }}Schema,
+    service: {{ m.entity_name }}Service = Depends(_get_service),
+    _user: dict = Depends(get_current_user),
+) -> ApiResponse[{{ m.entity_name }}ResponseSchema]:
+    """Actualiza un {{ m.entity_name }} existente."""
+    resultado = await service.actualizar(item_id, dto)
+    return success_response(resultado, "{{ m.entity_name }} actualizado exitosamente")
+
+
+@router.delete(
+    "/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def eliminar_{{ m.module_name }}(
+    item_id: int,
+    service: {{ m.entity_name }}Service = Depends(_get_service),
+    _user: dict = Depends(get_current_user),
+) -> None:
+    """Elimina un {{ m.entity_name }} por ID."""
+    await service.eliminar(item_id)

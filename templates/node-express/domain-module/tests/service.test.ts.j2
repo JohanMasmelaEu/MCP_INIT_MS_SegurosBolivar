@@ -1,0 +1,95 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { {{ m.entity_name }}Service } from "../{{ m.module_name }}.service.js";
+import { {{ m.entity_name }}Repository } from "../{{ m.module_name }}.repository.js";
+import { BolivarBusinessError } from "../../errors/bolivar-business.error.js";
+
+vi.mock("../{{ m.module_name }}.repository.js");
+
+describe("{{ m.entity_name }}Service", () => {
+  let service: {{ m.entity_name }}Service;
+  let mockRepository: vi.Mocked<{{ m.entity_name }}Repository>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new {{ m.entity_name }}Service();
+    mockRepository = (service as unknown as { repository: vi.Mocked<{{ m.entity_name }}Repository> }).repository;
+  });
+
+  describe("crear", () => {
+    it("debe crear un {{ m.entity_name }} con datos validos", async () => {
+      // Arrange
+      const dto = {
+{% for field in m.fields %}
+{% if field.field_type.value == "String" %}
+        {{ field.name }}: "test-value",
+{% elif field.field_type.value == "Long" or field.field_type.value == "Integer" %}
+        {{ field.name }}: 1,
+{% elif field.field_type.value == "Boolean" %}
+        {{ field.name }}: true,
+{% elif field.field_type.value == "BigDecimal" %}
+        {{ field.name }}: 100.50,
+{% elif field.field_type.value == "LocalDate" %}
+        {{ field.name }}: "2024-01-01",
+{% elif field.field_type.value == "LocalDateTime" %}
+        {{ field.name }}: "2024-01-01T00:00:00Z",
+{% elif field.field_type.value == "UUID" %}
+        {{ field.name }}: "550e8400-e29b-41d4-a716-446655440000",
+{% endif %}
+{% endfor %}
+      };
+      const expected = { id: 1, ...dto };
+      mockRepository.insertar = vi.fn().mockResolvedValue(expected);
+
+      // Act
+      const resultado = await service.crear(dto);
+
+      // Assert
+      expect(resultado).toEqual(expected);
+      expect(mockRepository.insertar).toHaveBeenCalledWith(dto);
+    });
+  });
+
+  describe("obtenerPorId", () => {
+    it("debe retornar {{ m.entity_name }} cuando existe", async () => {
+      // Arrange
+      const expected = { id: 1 };
+      mockRepository.buscarPorId = vi.fn().mockResolvedValue(expected);
+
+      // Act
+      const resultado = await service.obtenerPorId(1);
+
+      // Assert
+      expect(resultado).toEqual(expected);
+    });
+
+    it("debe lanzar BolivarBusinessError cuando no existe", async () => {
+      // Arrange
+      mockRepository.buscarPorId = vi.fn().mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(service.obtenerPorId(999)).rejects.toThrow(BolivarBusinessError);
+    });
+  });
+
+  describe("eliminar", () => {
+    it("debe eliminar {{ m.entity_name }} cuando existe", async () => {
+      // Arrange
+      mockRepository.buscarPorId = vi.fn().mockResolvedValue({ id: 1 });
+      mockRepository.eliminar = vi.fn().mockResolvedValue(undefined);
+
+      // Act
+      await service.eliminar(1);
+
+      // Assert
+      expect(mockRepository.eliminar).toHaveBeenCalledWith(1);
+    });
+
+    it("debe lanzar BolivarBusinessError cuando no existe", async () => {
+      // Arrange
+      mockRepository.buscarPorId = vi.fn().mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(service.eliminar(999)).rejects.toThrow(BolivarBusinessError);
+    });
+  });
+});

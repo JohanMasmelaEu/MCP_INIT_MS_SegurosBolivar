@@ -1,0 +1,94 @@
+"""Tests de integracion para {{ m.entity_name }} router."""
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from src.main import app
+
+
+@pytest.fixture
+async def client():
+    """Cliente httpx async para tests."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        yield ac
+
+
+class TestCrear{{ m.entity_name }}:
+    """Tests POST {{ context_path }}/api/v1/{{ m.resource_path_resolved }}."""
+
+    async def test_crear_retorna_201(self, client: AsyncClient) -> None:
+        """Debe crear y retornar 201."""
+        # Arrange
+        payload = {
+{% for field in m.fields %}
+{% if not field.nullable %}
+{% if field.field_type.value == "String" %}
+            "{{ field.name }}": "test-value",
+{% elif field.field_type.value == "Long" or field.field_type.value == "Integer" %}
+            "{{ field.name }}": 1,
+{% elif field.field_type.value == "Boolean" %}
+            "{{ field.name }}": True,
+{% elif field.field_type.value == "BigDecimal" %}
+            "{{ field.name }}": 100.50,
+{% elif field.field_type.value == "LocalDate" %}
+            "{{ field.name }}": "2024-01-01",
+{% elif field.field_type.value == "LocalDateTime" %}
+            "{{ field.name }}": "2024-01-01T00:00:00Z",
+{% elif field.field_type.value == "UUID" %}
+            "{{ field.name }}": "550e8400-e29b-41d4-a716-446655440000",
+{% endif %}
+{% endif %}
+{% endfor %}
+        }
+
+        # Act
+        response = await client.post(
+            "{{ context_path }}/api/v1/{{ m.resource_path_resolved }}/",
+            json=payload,
+        )
+
+        # Assert
+        assert response.status_code == 201
+        assert response.json()["codigo"] == "OK"
+
+    async def test_crear_retorna_422_con_payload_invalido(self, client: AsyncClient) -> None:
+        """Debe retornar 422 con payload vacio."""
+        # Act
+        response = await client.post(
+            "{{ context_path }}/api/v1/{{ m.resource_path_resolved }}/",
+            json={},
+        )
+
+        # Assert
+        assert response.status_code == 422
+
+
+class TestListar{{ m.entity_name }}:
+    """Tests GET {{ context_path }}/api/v1/{{ m.resource_path_resolved }}."""
+
+    async def test_listar_retorna_200(self, client: AsyncClient) -> None:
+        """Debe listar con paginacion."""
+        # Act
+        response = await client.get(
+            "{{ context_path }}/api/v1/{{ m.resource_path_resolved }}/?page=0&size=10",
+        )
+
+        # Assert
+        assert response.status_code == 200
+        assert response.json()["codigo"] == "OK"
+
+
+class TestObtenerPorId{{ m.entity_name }}:
+    """Tests GET {{ context_path }}/api/v1/{{ m.resource_path_resolved }}/{id}."""
+
+    async def test_retorna_404_cuando_no_existe(self, client: AsyncClient) -> None:
+        """Debe retornar 404 si no existe."""
+        # Act
+        response = await client.get(
+            "{{ context_path }}/api/v1/{{ m.resource_path_resolved }}/999",
+        )
+
+        # Assert
+        assert response.status_code == 404

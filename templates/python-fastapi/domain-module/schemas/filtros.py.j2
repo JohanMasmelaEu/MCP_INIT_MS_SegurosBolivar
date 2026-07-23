@@ -1,0 +1,15 @@
+"""Schema de filtros para {{ m.entity_name }}."""
+
+from pydantic import BaseModel, Field
+
+
+class Filtros{{ m.entity_name }}Schema(BaseModel):
+    """Filtros de busqueda para {{ m.entity_name }}."""
+
+{% for field in m.fields %}
+{% if field.field_type.value == "String" %}
+    {{ field.name }}: str | None = Field(default=None, description="Filtro por {{ field.name }} (parcial, case-insensitive)")
+{% elif field.field_type.value == "Boolean" %}
+    {{ field.name }}: bool | None = Field(default=None, description="Filtro por {{ field.name }}")
+{% endif %}
+{% endfor %}

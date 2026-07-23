@@ -1,0 +1,47 @@
+"""Contrato de respuesta API estandar."""
+
+from typing import Generic, TypeVar
+
+from pydantic import BaseModel
+
+T = TypeVar("T")
+
+
+class ApiResponse(BaseModel, Generic[T]):
+    """Respuesta API estandar de Seguros Bolivar.
+
+    Attributes:
+        codigo: Codigo de resultado (ej: OK, ERROR).
+        mensaje: Mensaje descriptivo.
+        data: Payload de datos (nullable).
+    """
+
+    codigo: str
+    mensaje: str
+    data: T | None = None
+
+
+def success_response(data: object, mensaje: str = "Operacion exitosa") -> ApiResponse[object]:
+    """Construye una respuesta exitosa.
+
+    Args:
+        data: Datos a retornar.
+        mensaje: Mensaje descriptivo.
+
+    Returns:
+        ApiResponse con codigo OK.
+    """
+    return ApiResponse(codigo="OK", mensaje=mensaje, data=data)
+
+
+def error_response(codigo: str, mensaje: str) -> ApiResponse[None]:
+    """Construye una respuesta de error.
+
+    Args:
+        codigo: Codigo de error.
+        mensaje: Mensaje descriptivo del error.
+
+    Returns:
+        ApiResponse con data None.
+    """
+    return ApiResponse(codigo=codigo, mensaje=mensaje, data=None)

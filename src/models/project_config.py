@@ -166,6 +166,12 @@ class ProjectConfig(BaseModel):
     Este es el modelo raiz que agrupa todas las categorias de configuracion.
     """
 
+    # --- Stack tecnologico ---
+    stack: str = Field(
+        default="java-spring-boot",
+        description="Stack tecnologico del proyecto (java-spring-boot, node-express, python-fastapi).",
+    )
+
     # --- Identidad del proyecto ---
     project_name: str = Field(
         description="Nombre del microservicio (ej: gestion-polizas-ms)",
@@ -173,10 +179,10 @@ class ProjectConfig(BaseModel):
     )
     group_id: str = Field(
         default="com.bolivar.comunes",
-        description="Grupo Gradle/Maven (ej: com.bolivar.comunes)",
+        description="Grupo Gradle/Maven (ej: com.bolivar.comunes). Solo aplica para Java.",
     )
     context_path: str = Field(
-        description="Context-path del servlet (ej: /gestion_polizas)",
+        description="Context-path del servlet / base path del API (ej: /gestion_polizas)",
         pattern=r"^/[a-z_][a-z0-9_]*$",
     )
     api_description: str = Field(
@@ -273,6 +279,34 @@ class ProjectConfig(BaseModel):
     extra_public_paths: list[str] = Field(
         default_factory=list,
         description="Paths adicionales que no requieren autenticacion (ej: /api/v1/auth/token).",
+    )
+
+    # --- Node specific ---
+    typescript_strict: bool = Field(
+        default=True,
+        description="TypeScript strict mode en tsconfig. Solo aplica para node-express.",
+    )
+    use_husky: bool = Field(
+        default=True,
+        description="Incluir Husky + lint-staged para pre-commit. Solo aplica para node-express.",
+    )
+    npm_scope: Optional[str] = Field(
+        default=None,
+        description="Scope npm (ej: @bolivar). None = sin scope. Solo aplica para node-express.",
+    )
+    use_npmrc: bool = Field(
+        default=False,
+        description="Generar .npmrc con registry Artifactory. Solo aplica para node-express.",
+    )
+
+    # --- Python specific ---
+    mypy_strict: bool = Field(
+        default=True,
+        description="mypy --strict en config. Solo aplica para python-fastapi.",
+    )
+    use_pre_commit: bool = Field(
+        default=True,
+        description="Incluir pre-commit hooks (ruff + mypy). Solo aplica para python-fastapi.",
     )
 
     @field_validator("project_name")

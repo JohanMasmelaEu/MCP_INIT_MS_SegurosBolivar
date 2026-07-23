@@ -1,0 +1,57 @@
+"""Modelo SQLAlchemy para {{ m.entity_name }}."""
+
+from sqlalchemy import String, Integer, Boolean, Numeric, Date, DateTime
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+from src.commons.audit_mixin import AuditMixin
+
+
+class Base(DeclarativeBase):
+    """Base declarativa de SQLAlchemy."""
+
+
+class {{ m.entity_name }}(AuditMixin, Base):
+    """Modelo SQLAlchemy para tabla {{ m.table_name | lower }}.
+
+    Representa la entidad {{ m.entity_name }} en la base de datos.
+    """
+
+    __tablename__ = "{{ m.table_name | lower }}"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+{% if m.has_cod_field %}
+    cod_{{ m.module_name }}: Mapped[str] = mapped_column(
+        String(36), nullable=False, unique=True, server_default="gen_random_uuid()::text"
+    )
+{% endif %}
+{% for field in m.fields %}
+{% if field.field_type.value == "String" %}
+    {{ field.name }}: Mapped[{{ "str" if not field.nullable else "str | None" }}] = mapped_column(
+        String({{ field.length or 255 }}), nullable={{ field.nullable }}{% if field.unique %}, unique=True{% endif %}
+    )
+{% elif field.field_type.value == "Long" or field.field_type.value == "Integer" %}
+    {{ field.name }}: Mapped[{{ "int" if not field.nullable else "int | None" }}] = mapped_column(
+        Integer, nullable={{ field.nullable }}{% if field.unique %}, unique=True{% endif %}
+    )
+{% elif field.field_type.value == "Boolean" %}
+    {{ field.name }}: Mapped[{{ "bool" if not field.nullable else "bool | None" }}] = mapped_column(
+        Boolean, nullable={{ field.nullable }}
+    )
+{% elif field.field_type.value == "BigDecimal" %}
+    {{ field.name }}: Mapped[{{ "str" if not field.nullable else "str | None" }}] = mapped_column(
+        Numeric(precision=18, scale=2), nullable={{ field.nullable }}
+    )
+{% elif field.field_type.value == "LocalDate" %}
+    {{ field.name }}: Mapped[{{ "str" if not field.nullable else "str | None" }}] = mapped_column(
+        Date, nullable={{ field.nullable }}
+    )
+{% elif field.field_type.value == "LocalDateTime" %}
+    {{ field.name }}: Mapped[{{ "str" if not field.nullable else "str | None" }}] = mapped_column(
+        DateTime, nullable={{ field.nullable }}
+    )
+{% elif field.field_type.value == "UUID" %}
+    {{ field.name }}: Mapped[{{ "str" if not field.nullable else "str | None" }}] = mapped_column(
+        String(36), nullable={{ field.nullable }}{% if field.unique %}, unique=True{% endif %}
+    )
+{% endif %}
+{% endfor %}

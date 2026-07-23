@@ -1,0 +1,22 @@
+{
+  "interactiveLogin": false,
+  "httpServer": "NettyWrapper",
+  "tokenCallbacks": [
+    {
+      "issuerId": "default",
+      "tokenExpiry": 3600,
+      "requestMappings": [
+        {
+          "requestParam": "grant_type",
+          "match": "*",
+          "claims": {
+            "sub": "test-user",
+            "aud": "{{ project_name }}",
+            "roles": ["user", "admin"],
+            "scope": "openid profile"
+          }
+        }
+      ]
+    }
+  ]
+}

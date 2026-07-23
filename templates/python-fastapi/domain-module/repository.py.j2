@@ -1,0 +1,121 @@
+"""Repository para {{ m.entity_name }} — SQLAlchemy 2.x async."""
+
+from sqlalchemy import select, func, delete, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.commons.pagination import PaginationParams
+from src.{{ m.module_name }}.models import {{ m.entity_name }}
+from src.{{ m.module_name }}.schemas.filtros import Filtros{{ m.entity_name }}Schema
+
+
+class {{ m.entity_name }}Repository:
+    """Acceso a datos para {{ m.entity_name }} con queries parametrizados.
+
+    Attributes:
+        _session: Sesion async de SQLAlchemy.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        """Inicializa el repository.
+
+        Args:
+            session: Sesion async de SQLAlchemy.
+        """
+        self._session = session
+
+    async def insertar(self, data: dict) -> {{ m.entity_name }}:
+        """Inserta un nuevo registro.
+
+        Args:
+            data: Diccionario con los campos a insertar.
+
+        Returns:
+            Entidad creada.
+        """
+        entity = {{ m.entity_name }}(**data)
+        self._session.add(entity)
+        await self._session.flush()
+        await self._session.refresh(entity)
+        return entity
+
+    async def buscar_por_id(self, item_id: int) -> {{ m.entity_name }} | None:
+        """Busca un registro por ID.
+
+        Args:
+            item_id: ID del registro.
+
+        Returns:
+            Entidad o None si no existe.
+        """
+        stmt = select({{ m.entity_name }}).where({{ m.entity_name }}.id == item_id)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def listar_con_filtros(
+        self,
+        filtros: Filtros{{ m.entity_name }}Schema,
+        pagination: PaginationParams,
+    ) -> tuple[list[{{ m.entity_name }}], int]:
+        """Lista registros con filtros dinamicos y paginacion.
+
+        Args:
+            filtros: Schema con campos filtrables.
+            pagination: Parametros de paginacion.
+
+        Returns:
+            Tupla con lista de entidades y total de registros.
+        """
+        stmt = select({{ m.entity_name }})
+        count_stmt = select(func.count()).select_from({{ m.entity_name }})
+
+        # Filtros dinamicos
+{% for field in m.fields %}
+{% if field.field_type.value == "String" %}
+        if filtros.{{ field.name }}:
+            stmt = stmt.where({{ m.entity_name }}.{{ field.name }}.ilike(f"%{filtros.{{ field.name }}}%"))
+            count_stmt = count_stmt.where({{ m.entity_name }}.{{ field.name }}.ilike(f"%{filtros.{{ field.name }}}%"))
+{% endif %}
+{% endfor %}
+
+        # Paginacion
+        stmt = stmt.offset(pagination.page * pagination.size).limit(pagination.size)
+
+        result = await self._session.execute(stmt)
+        entities = list(result.scalars().all())
+
+        count_result = await self._session.execute(count_stmt)
+        total = count_result.scalar_one()
+
+        return entities, total
+
+    async def actualizar(self, item_id: int, data: dict) -> {{ m.entity_name }}:
+        """Actualiza un registro existente.
+
+        Args:
+            item_id: ID del registro.
+            data: Campos a actualizar.
+
+        Returns:
+            Entidad actualizada.
+        """
+        stmt = (
+            update({{ m.entity_name }})
+            .where({{ m.entity_name }}.id == item_id)
+            .values(**data)
+            .returning({{ m.entity_name }})
+        )
+        result = await self._session.execute(stmt)
+        await self._session.flush()
+        entity = result.scalar_one()
+        await self._session.refresh(entity)
+        return entity
+
+    async def eliminar(self, item_id: int) -> None:
+        """Elimina un registro por ID.
+
+        Args:
+            item_id: ID del registro.
+        """
+        stmt = delete({{ m.entity_name }}).where({{ m.entity_name }}.id == item_id)
+        await self._session.execute(stmt)
+        await self._session.flush()

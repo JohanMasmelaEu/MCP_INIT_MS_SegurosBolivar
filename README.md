@@ -1,6 +1,14 @@
 # MCP_INIT_MS_SegurosBolivar
 
-MCP Server para la inicializacion automatizada de microservicios en Seguros Bolivar. Genera arquetipos completos de proyectos Java 21 / Spring Boot 4.x / Gradle listos para desarrollo local con Docker Compose (LocalStack, Mock OAuth, Datadog Agent).
+MCP Server para la inicializacion automatizada de microservicios en Seguros Bolivar. Genera arquetipos completos de proyectos listos para desarrollo local con Docker Compose (LocalStack, Mock OAuth, Datadog Agent).
+
+Stacks soportados:
+
+| Stack | Runtime | Framework | ORM | Status |
+|-------|---------|-----------|-----|--------|
+| `java-spring-boot` | JDK 21 | Spring Boot 4.x + Gradle 9.x | Spring Data JPA | Disponible |
+| `node-express` | Node.js 22 | Express 4.x + TypeScript 5.x | Drizzle ORM | Disponible |
+| `python-fastapi` | Python 3.12 | FastAPI + uv | SQLAlchemy 2.x async | Disponible |
 
 ---
 
@@ -90,7 +98,7 @@ Escribe en Kiro:
 
 > "Lista los stacks disponibles del MCP de inicializacion"
 
-Deberia responder con `java-spring-boot`. Si lo hace, el MCP esta funcionando.
+Deberia responder con los 3 stacks disponibles: `java-spring-boot`, `node-express`, `python-fastapi`. Si lo hace, el MCP esta funcionando.
 
 ---
 
@@ -202,7 +210,7 @@ Archivos aparecen en tu carpeta de repos local. Listo para docker compose up.
 
 | Tool | Descripcion |
 |------|-------------|
-| `list_available_stacks` | Lista los stacks de proyecto disponibles (V1: java-spring-boot) |
+| `list_available_stacks` | Lista los stacks de proyecto disponibles (java-spring-boot, node-express, python-fastapi) |
 | `get_required_inputs` | Devuelve el schema de datos que el usuario debe proporcionar |
 | `get_project_plan` | Genera el plan detallado de archivos (para confirmacion del usuario) |
 | `initialize_project` | Ejecuta la generacion completa del proyecto en disco |
@@ -215,17 +223,43 @@ Archivos aparecen en tu carpeta de repos local. Listo para docker compose up.
 
 ## Que genera
 
-Un proyecto completo listo para `docker compose up`:
+Un proyecto completo listo para `docker compose up`, segun el stack elegido:
 
+### Java/Spring Boot
 - **Gradle 9.x + Spring Boot 4.x + Java 21** con dependencias pinned
 - **Estructura domain-driven** (controller/dto/service/repository por modulo)
-- **Spring Security configurable** (OAuth2 RS, API Gateway, deferred)
+- **Spring Security configurable** (OAuth2 RS, API Gateway, M2M, deferred)
 - **Docker Compose local** (LocalStack SSM/S3/SQS + Mock OAuth + Datadog Agent no-forward)
 - **SpringDoc OpenAPI + Swagger UI** funcional en local
 - **CI/CD GitHub Actions** con templates institucionales
 - **JaCoCo** con cobertura minima 85%
-- **Archivos .kiro** (steering, rules, changelogs) para contexto de Kiro
+
+### Node.js/Express/TypeScript
+- **Node.js 22 + Express 4.x + TypeScript 5.5+ strict**
+- **Drizzle ORM** (PostgreSQL, type-safe)
+- **Zod** para validacion runtime + tipos
+- **Pino** para logging estructurado + AsyncLocalStorage (correlation-id)
+- **Passport JWT** configurable (OAuth2 RS, API Gateway, M2M, deferred)
+- **Vitest + Supertest** con cobertura minima 80%
+- **ESLint v9 flat + Prettier + Husky** (opcional)
+- **Docker multi-stage** (node:22-alpine)
+
+### Python/FastAPI
+- **Python 3.12 + FastAPI + uv** (package manager)
+- **SQLAlchemy 2.x async** (asyncpg, PostgreSQL)
+- **Pydantic v2** para validacion y settings
+- **structlog** para logging estructurado + contextvars (correlation-id)
+- **python-jose** para JWT (OAuth2 RS, M2M, deferred)
+- **pytest + httpx** con cobertura minima 80%
+- **Ruff** (lint + format + isort + bandit) + **mypy strict**
+- **Docker multi-stage** (python:3.12-slim + uv)
+
+### Comun a los 3 stacks
+- **Docker Compose local** (LocalStack + Redis condicional + Mock OAuth condicional + Datadog Agent)
+- **CI/CD GitHub Actions** con pipeline completo
+- **Archivos .kiro** (steering, hooks, changelogs, mcp-settings)
 - **README, api_spec.yaml, .env.sample** completos
+- **4 auth strategies** pluggables (oauth2-resource-server, api-gateway-delegated, machine-to-machine, deferred)
 
 ---
 
@@ -357,17 +391,20 @@ MCP_INIT_MS_SegurosBolivar/
 │       ├── file_writer.py          # Escritura segura de archivos
 │       └── template_renderer.py    # Render Jinja2
 ├── templates/
-│   └── java-spring-boot/           # 63 templates Jinja2 del arquetipo
-│       ├── gradle/                 # build.gradle, wrapper, settings
-│       ├── src/                    # Java base: commons, config, entity, errorhandling, utils
+│   ├── java-spring-boot/           # ~87 templates Jinja2 (Java 21 / Spring Boot 4.x)
+│   ├── node-express/               # ~69 templates Jinja2 (Node 22 / Express / TypeScript)
+│   └── python-fastapi/             # ~72 templates Jinja2 (Python 3.12 / FastAPI / uv)
+│       ├── src/                    # Codigo fuente base: config, commons, middleware, errors, utils
 │       ├── domain-module/          # Template repetible por cada modulo CRUD
-│       ├── resources/              # application.yaml (3 perfiles)
 │       ├── infra/                  # Dockerfile, docker-compose, LocalStack, Datadog
 │       ├── cicd/                   # GitHub Actions, CODEOWNERS
 │       ├── docs/                   # README, api_spec.yaml
-│       ├── kiro/                   # .kiro steering, changelogs
+│       ├── kiro/                   # .kiro steering, hooks, changelogs
 │       └── git/                    # .gitignore, .gitattributes
-├── blueprints/                     # TECH_STACK_BLUEPRINT.md
+├── blueprints/
+│   ├── TECH_STACK_BLUEPRINT.md     # Blueprint Java
+│   ├── TECH_STACK_BLUEPRINT_NODE.md # Blueprint Node
+│   └── TECH_STACK_BLUEPRINT_PYTHON.md # Blueprint Python
 └── rules/                          # Rules transversales inyectados en proyectos
 ```
 

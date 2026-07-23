@@ -1,0 +1,32 @@
+/**
+ * Campos de auditoria comunes para entidades.
+ * Se aplican automaticamente en el repository al crear/actualizar.
+ */
+export interface AuditFields {
+  creadoPor: string;
+  fechaCreacion: Date;
+  modificadoPor: string | null;
+  fechaModificacion: Date | null;
+}
+
+/**
+ * Genera los campos de auditoria para creacion.
+ */
+export function auditCreacion(usuario: string): Pick<AuditFields, "creadoPor" | "fechaCreacion"> {
+  return {
+    creadoPor: usuario,
+    fechaCreacion: new Date(),
+  };
+}
+
+/**
+ * Genera los campos de auditoria para actualizacion.
+ */
+export function auditActualizacion(
+  usuario: string,
+): Pick<AuditFields, "modificadoPor" | "fechaModificacion"> {
+  return {
+    modificadoPor: usuario,
+    fechaModificacion: new Date(),
+  };
+}

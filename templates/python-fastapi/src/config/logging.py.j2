@@ -1,0 +1,80 @@
+"""Configuracion de logging con structlog."""
+
+import logging
+
+import structlog
+
+from src.config.settings import get_settings
+from src.middleware.correlation_id import get_correlation_id
+
+
+def setup_logging() -> None:
+    """Configura structlog con procesadores segun el ambiente.
+
+    - Local: formato legible en consola.
+    - Produccion: JSON estructurado para Datadog.
+    """
+    settings = get_settings()
+    is_local = settings.app_env == "local"
+
+    shared_processors: list[structlog.types.Processor] = [
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.add_logger_name,
+        structlog.processors.TimeStamper(fmt="iso"),
+        _add_correlation_id,
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+    ]
+
+    if is_local:
+        renderer = structlog.dev.ConsoleRenderer(colors=True)
+    else:
+        renderer = structlog.processors.JSONRenderer()
+
+    structlog.configure(
+        processors=[
+            *shared_processors,
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
+
+    formatter = structlog.stdlib.ProcessorFormatter(
+        processors=[
+            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+            renderer,
+        ],
+    )
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.handlers.clear()
+    root_logger.addHandler(handler)
+    root_logger.setLevel(getattr(logging, settings.log_level.upper(), logging.INFO))
+
+
+def _add_correlation_id(
+    _logger: object, _method: str, event_dict: dict[str, object]
+) -> dict[str, object]:
+    """Procesador que agrega correlation_id al log event."""
+    correlation_id = get_correlation_id()
+    if correlation_id:
+        event_dict["correlation_id"] = correlation_id
+    return event_dict
+
+
+def get_logger(name: str) -> structlog.stdlib.BoundLogger:
+    """Obtiene un logger estructurado con nombre.
+
+    Args:
+        name: Nombre del modulo (ej: 'src.polizas.service').
+
+    Returns:
+        Logger structlog configurado.
+    """
+    return structlog.get_logger(name)

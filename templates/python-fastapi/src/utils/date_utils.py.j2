@@ -1,0 +1,54 @@
+"""Utilidades de fecha ISO-8601."""
+
+from datetime import date, datetime, timezone
+
+
+def now_iso() -> str:
+    """Retorna la fecha/hora actual en formato ISO-8601 (UTC).
+
+    Returns:
+        String ISO-8601 con timezone UTC.
+    """
+    return datetime.now(timezone.utc).isoformat()
+
+
+def to_date_string(dt: date) -> str:
+    """Formatea una fecha a string ISO-8601 (solo fecha).
+
+    Args:
+        dt: Fecha a formatear.
+
+    Returns:
+        String en formato YYYY-MM-DD.
+    """
+    return dt.isoformat()
+
+
+def parse_iso_date(value: str) -> date | None:
+    """Parsea un string ISO-8601 a date.
+
+    Args:
+        value: String en formato YYYY-MM-DD.
+
+    Returns:
+        date o None si el formato es invalido.
+    """
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def parse_iso_datetime(value: str) -> datetime | None:
+    """Parsea un string ISO-8601 a datetime.
+
+    Args:
+        value: String ISO-8601 con hora.
+
+    Returns:
+        datetime o None si el formato es invalido.
+    """
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None

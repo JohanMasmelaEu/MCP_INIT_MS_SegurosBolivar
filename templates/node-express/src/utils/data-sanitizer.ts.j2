@@ -1,0 +1,46 @@
+/**
+ * Sanitiza strings para prevenir XSS.
+ * Escapa caracteres HTML peligrosos.
+ */
+export function sanitizeHtml(input: string): string {
+  const map: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#x27;",
+    "/": "&#x2F;",
+  };
+  return input.replace(/[&<>"'/]/g, (char) => map[char] ?? char);
+}
+
+/**
+ * Sanitiza un objeto recursivamente, escapando todos los strings.
+ */
+export function sanitizeObject<T>(obj: T): T {
+  if (typeof obj === "string") {
+    return sanitizeHtml(obj) as T;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeObject) as T;
+  }
+  if (obj !== null && typeof obj === "object") {
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      sanitized[key] = sanitizeObject(value);
+    }
+    return sanitized as T;
+  }
+  return obj;
+}
+
+/**
+ * Mascara datos sensibles para logging.
+ * Muestra solo los ultimos 4 caracteres.
+ */
+export function maskSensitive(value: string, visibleChars = 4): string {
+  if (value.length <= visibleChars) {
+    return "****";
+  }
+  return "****" + value.slice(-visibleChars);
+}

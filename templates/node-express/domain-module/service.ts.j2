@@ -1,0 +1,97 @@
+import { {{ m.entity_name }}Repository } from "./{{ m.module_name }}.repository.js";
+import type { Crear{{ m.entity_name }}Dto } from "./dto/crear.dto.js";
+import type { Actualizar{{ m.entity_name }}Dto } from "./dto/actualizar.dto.js";
+import type { {{ m.entity_name }}Response } from "./dto/response.dto.js";
+import type { PaginationParams } from "../commons/pagination.dto.js";
+import { BolivarBusinessError } from "../errors/bolivar-business.error.js";
+import { ErrorType } from "../errors/error-types.enum.js";
+
+/**
+ * Servicio de negocio para {{ m.entity_name }}.
+ * Contiene la logica de dominio y orquesta el repository.
+ */
+export class {{ m.entity_name }}Service {
+  private readonly repository: {{ m.entity_name }}Repository;
+
+  constructor() {
+    this.repository = new {{ m.entity_name }}Repository();
+  }
+
+  /**
+   * Crea un nuevo {{ m.entity_name }}.
+   */
+  async crear(dto: Crear{{ m.entity_name }}Dto): Promise<{{ m.entity_name }}Response> {
+    const entity = await this.repository.insertar(dto);
+    return this.toResponse(entity);
+  }
+
+  /**
+   * Lista {{ m.entity_name }} con filtros y paginacion.
+   */
+  async listar(
+    filtros: Record<string, unknown>,
+    paginacion: PaginationParams,
+  ): Promise<{ data: {{ m.entity_name }}Response[]; total: number }> {
+    const { data, total } = await this.repository.listarConFiltros(filtros, paginacion);
+    return {
+      data: data.map((e) => this.toResponse(e)),
+      total,
+    };
+  }
+
+  /**
+   * Obtiene un {{ m.entity_name }} por su ID.
+   */
+  async obtenerPorId(id: number): Promise<{{ m.entity_name }}Response> {
+    const entity = await this.repository.buscarPorId(id);
+    if (!entity) {
+      throw new BolivarBusinessError({
+        codigo: "{{ m.entity_name | upper }}_NO_ENCONTRADO",
+        mensaje: `{{ m.entity_name }} con id ${id} no encontrado`,
+        categoria: ErrorType.NEGOCIO,
+        httpStatus: 404,
+      });
+    }
+    return this.toResponse(entity);
+  }
+
+  /**
+   * Actualiza un {{ m.entity_name }} existente.
+   */
+  async actualizar(id: number, dto: Actualizar{{ m.entity_name }}Dto): Promise<{{ m.entity_name }}Response> {
+    const existing = await this.repository.buscarPorId(id);
+    if (!existing) {
+      throw new BolivarBusinessError({
+        codigo: "{{ m.entity_name | upper }}_NO_ENCONTRADO",
+        mensaje: `{{ m.entity_name }} con id ${id} no encontrado`,
+        categoria: ErrorType.NEGOCIO,
+        httpStatus: 404,
+      });
+    }
+    const updated = await this.repository.actualizar(id, dto);
+    return this.toResponse(updated);
+  }
+
+  /**
+   * Elimina un {{ m.entity_name }} por su ID.
+   */
+  async eliminar(id: number): Promise<void> {
+    const existing = await this.repository.buscarPorId(id);
+    if (!existing) {
+      throw new BolivarBusinessError({
+        codigo: "{{ m.entity_name | upper }}_NO_ENCONTRADO",
+        mensaje: `{{ m.entity_name }} con id ${id} no encontrado`,
+        categoria: ErrorType.NEGOCIO,
+        httpStatus: 404,
+      });
+    }
+    await this.repository.eliminar(id);
+  }
+
+  /**
+   * Mapea entity a DTO de respuesta.
+   */
+  private toResponse(entity: Record<string, unknown>): {{ m.entity_name }}Response {
+    return entity as unknown as {{ m.entity_name }}Response;
+  }
+}

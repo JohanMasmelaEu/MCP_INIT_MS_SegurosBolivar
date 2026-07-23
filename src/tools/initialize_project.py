@@ -8,8 +8,17 @@ from pathlib import Path
 from typing import Optional
 
 from src.generators.java_spring_boot import JavaSpringBootGenerator
+from src.generators.node_express import NodeExpressGenerator
+from src.generators.python_fastapi import PythonFastApiGenerator
 from src.models.project_config import ProjectConfig
 from src.utils.settings import get_output_directory
+
+# Mapeo de stack_id a clase generadora
+_GENERATORS = {
+    "java-spring-boot": JavaSpringBootGenerator,
+    "node-express": NodeExpressGenerator,
+    "python-fastapi": PythonFastApiGenerator,
+}
 
 logger = logging.getLogger("mcp_init_ms.tools.initialize_project")
 
@@ -86,7 +95,14 @@ def handle_initialize_project(config_dict: dict, target_path: Optional[str] = No
         }
 
     try:
-        generator = JavaSpringBootGenerator(config, project_root)
+        stack = config.stack
+        generator_class = _GENERATORS.get(stack)
+        if not generator_class:
+            return {
+                "status": "error",
+                "message": f"Stack '{stack}' no soportado. Stacks disponibles: {', '.join(_GENERATORS.keys())}",
+            }
+        generator = generator_class(config, project_root)
         created_files = generator.generate()
 
         logger.info(

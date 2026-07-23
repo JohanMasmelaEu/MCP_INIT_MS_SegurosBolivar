@@ -1,0 +1,11 @@
+import { createApp } from "../../src/app.js";
+
+/**
+ * Express app configurada sin listen.
+ * Usada por supertest para tests de integracion.
+ *
+ * Ejemplo:
+ *   import { testApp } from "../helpers/test-app.js";
+ *   const response = await request(testApp).get("/health");
+ */
+export const testApp = createApp();

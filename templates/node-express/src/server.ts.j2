@@ -1,0 +1,46 @@
+import { createApp } from "./app.js";
+import { config } from "./config/index.js";
+import { logger } from "./config/logger.js";
+import { pool } from "./config/database.js";
+
+const app = createApp();
+const PORT = config.APP_PORT;
+
+const server = app.listen(PORT, () => {
+  logger.info({ port: PORT }, `{{ project_name }} escuchando en puerto ${PORT}`);
+});
+
+// --- Graceful shutdown ---
+const shutdown = async (signal: string): Promise<void> => {
+  logger.info({ signal }, "Senal recibida, cerrando conexiones...");
+
+  server.close(async () => {
+    try {
+      await pool.end();
+      logger.info("Pool de base de datos cerrado.");
+    } catch (err) {
+      logger.error({ err }, "Error cerrando pool de BD");
+    }
+    process.exit(0);
+  });
+
+  // Forzar cierre si no termina en 10s
+  setTimeout(() => {
+    logger.warn("Shutdown forzado por timeout");
+    process.exit(1);
+  }, 10_000);
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+// --- Errores no capturados ---
+process.on("unhandledRejection", (reason) => {
+  logger.fatal({ reason }, "Unhandled rejection — cerrando proceso");
+  process.exit(1);
+});
+
+process.on("uncaughtException", (err) => {
+  logger.fatal({ err }, "Uncaught exception — cerrando proceso");
+  process.exit(1);
+});

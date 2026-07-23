@@ -1,0 +1,56 @@
+import { z } from "zod";
+
+/**
+ * Schema Zod para validar variables de entorno al iniciar la aplicacion.
+ * Falla rapido si falta alguna variable requerida.
+ */
+const envSchema = z.object({
+  NODE_ENV: z.enum(["local", "development", "staging", "production"]).default("local"),
+  APP_PORT: z.coerce.number().default({{ app_port }}),
+
+  // Database
+  DB_HOST: z.string().min(1),
+  DB_PORT: z.coerce.number().default({{ db.db_port }}),
+  DB_NAME: z.string().default("{{ db.db_name }}"),
+  DB_USER: z.string().min(1),
+  DB_PASSWORD: z.string().min(1),
+  DB_SCHEMA: z.string().default("{{ db.db_schema }}"),
+  DB_SSL: z.coerce.boolean().default(false),
+  DB_POOL_MIN: z.coerce.number().default(2),
+  DB_POOL_MAX: z.coerce.number().default(10),
+
+  // CORS
+  CORS_ALLOWED_ORIGINS: z.string().default("http://localhost:3000"),
+
+{% if auth_strategy == "oauth2-resource-server" %}
+  // OAuth2
+  OAUTH_JWKS_URI: z.string().url(),
+  OAUTH_ISSUER: z.string().url(),
+  OAUTH_AUDIENCE: z.string().optional(),
+{% endif %}
+
+{% if cache == "redis" %}
+  // Redis
+  REDIS_HOST: z.string().default("localhost"),
+  REDIS_PORT: z.coerce.number().default({{ redis_port }}),
+  REDIS_PASSWORD: z.string().optional(),
+{% endif %}
+
+  // AWS / LocalStack
+  AWS_REGION: z.string().default("us-east-1"),
+  AWS_ENDPOINT: z.string().url().optional(),
+  SSM_PREFIX: z.string().default("{{ ssm_app_prefix }}"),
+
+  // Observability
+  DD_SERVICE: z.string().default("{{ dd_service }}"),
+  DD_ENV: z.string().default("local"),
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
+});
+
+export type EnvConfig = z.infer<typeof envSchema>;
+
+/**
+ * Configuracion validada de la aplicacion.
+ * Si las variables no cumplen el schema, el proceso falla al iniciar.
+ */
+export const config: EnvConfig = envSchema.parse(process.env);

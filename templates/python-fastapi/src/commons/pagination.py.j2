@@ -1,0 +1,52 @@
+"""Modelos de paginacion estandar."""
+
+from typing import Generic, TypeVar
+
+from pydantic import BaseModel, Field
+
+T = TypeVar("T")
+
+MAX_PAGE_SIZE = 100
+DEFAULT_PAGE_SIZE = 20
+
+
+class PaginationParams(BaseModel):
+    """Parametros de paginacion de entrada."""
+
+    page: int = Field(default=0, ge=0, description="Numero de pagina (0-indexed)")
+    size: int = Field(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Tamano de pagina")
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    """Respuesta paginada estandar."""
+
+    content: list[T]
+    page: int
+    size: int
+    total_pages: int
+    total_elements: int
+
+
+def build_paginated_response(
+    content: list[object],
+    total_elements: int,
+    params: PaginationParams,
+) -> PaginatedResponse[object]:
+    """Construye la respuesta paginada.
+
+    Args:
+        content: Lista de elementos de la pagina actual.
+        total_elements: Total de elementos en la BD.
+        params: Parametros de paginacion usados.
+
+    Returns:
+        PaginatedResponse con metadatos de paginacion.
+    """
+    total_pages = (total_elements + params.size - 1) // params.size if params.size > 0 else 0
+    return PaginatedResponse(
+        content=content,
+        page=params.page,
+        size=params.size,
+        total_pages=total_pages,
+        total_elements=total_elements,
+    )

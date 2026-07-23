@@ -44,3 +44,54 @@
 - Se actualizó README con configuración Docker correcta, diagrama de arquitectura y documentación completa
 - Se eliminó variable de entorno `MCP_WORKSPACE_PATH` del Dockerfile (ya no es necesaria)
 - Se expone puerto 9752 en Dockerfile para el Archetype Visualizer
+
+### Agregado
+- Se agregó soporte multi-stack: Node.js/Express y Python/FastAPI junto al existente Java/Spring Boot
+- Se actualizó `list_available_stacks.py` — los 3 stacks ahora tienen status 'available' con capabilities completas
+- Se agregó categoría `node_specific` en `get_required_inputs.py` (typescript_strict, use_husky, npm_scope, use_npmrc)
+- Se agregó categoría `python_specific` en `get_required_inputs.py` (mypy_strict, use_pre_commit)
+- Se agregó campo `stack` a `ProjectConfig` (default: java-spring-boot)
+- Se agregaron campos Node-specific a `ProjectConfig`: typescript_strict, use_husky, npm_scope, use_npmrc
+- Se agregaron campos Python-specific a `ProjectConfig`: mypy_strict, use_pre_commit
+- Se creó stub `src/generators/node_express.py` (NodeExpressGenerator) — pendiente Bloque B
+- Se creó stub `src/generators/python_fastapi.py` (PythonFastApiGenerator) — pendiente Bloque C
+- Se agregó file tree para Node/Express en `get_project_plan.py` (_build_node_file_tree)
+- Se agregó file tree para Python/FastAPI en `get_project_plan.py` (_build_python_file_tree)
+
+### Cambiado
+- Se refactorizó `initialize_project.py` para usar dispatch dict `_GENERATORS` por stack en vez de hardcodear Java
+- Se refactorizó `add_domain_module.py` para usar dispatch dict `_GENERATORS` por stack
+- Se refactorizó `get_project_plan.py` — `_build_file_tree` delega a funciones por stack, `_build_next_steps` adapta pasos por stack
+- Se actualizó `_flatten_categorized_config` en `server.py` para aplanar categorías node_specific y python_specific
+
+### Agregado
+- Se implementó generador completo `NodeExpressGenerator` en `src/generators/node_express.py`
+- Se crearon 69 templates Jinja2 en `templates/node-express/` para generación completa de proyectos Node.js 22 + Express + TypeScript:
+  - Core: package.json, tsconfig, vitest.config, eslint, prettier, git
+  - Source: app.ts, server.ts, config/ (Zod env, Drizzle DB, Pino logger, Passport security), commons/, middleware/, errors/, utils/
+  - Domain-module: controller (Router CRUD), service, repository (Drizzle), schema, DTOs (Zod), tests (Vitest+Supertest)
+  - Infra: Dockerfile multi-stage, docker-compose (condicional Redis/OAuth/DD), seed-ssm, .env
+  - CI/CD: pipeline GitHub Actions, CODEOWNERS, PR template
+  - Docs: README completo, api_spec.yaml OpenAPI 3.0.3
+  - Kiro: project.json, 10 steering files, 7 hooks, changelog, mcp-settings
+  - Condicionales: husky pre-commit, .npmrc Artifactory, test-app helper
+
+### Agregado
+- Se implementó generador completo `PythonFastApiGenerator` en `src/generators/python_fastapi.py`
+- Se crearon 72 templates Jinja2 en `templates/python-fastapi/` para generación completa de proyectos Python 3.12 + FastAPI + uv:
+  - Core: pyproject.toml (uv + ruff + mypy + pytest), gitignore, pre-commit-config.yaml
+  - Source: main.py (app factory con lifespan), config/ (Pydantic Settings, AsyncEngine SQLAlchemy, structlog, security condicional), commons/, middleware/, errors/, utils/
+  - Domain-module: router (APIRouter CRUD con Depends DI), service, repository (SQLAlchemy async), models, schemas/ (Pydantic v2), tests/ (pytest + AsyncMock + httpx)
+  - Infra: Dockerfile multi-stage (python:3.12-slim + uv), docker-compose condicional, seed-ssm, .env
+  - CI/CD: pipeline GitHub Actions (uv + ruff + mypy + pytest), CODEOWNERS, PR template
+  - Docs: README completo, api_spec.yaml OpenAPI 3.0.3
+  - Kiro: project.json, 10 steering files, 7 hooks, changelog, mcp-settings
+  - Tests base: conftest con httpx AsyncClient, factories
+
+### Agregado
+- Se implementó Implementation Tracker transversal para los 3 stacks:
+  - Template `kiro/implementation-log.json.j2` en java-spring-boot, node-express y python-fastapi
+  - Generadores actualizados para producir `.kiro/implementation-log.json` en cada proyecto generado
+  - Sección "Implementation Tracker" agregada al steering `05-responsible-ai-use.md.j2` (reglas de tracking)
+  - Hook `implementation-tracker.json.j2` (PostToolUse, registra progreso silenciosamente)
+  - Hook `summary-on-completion.json.j2` actualizado para reportar estado del plan activo al finalizar sesión

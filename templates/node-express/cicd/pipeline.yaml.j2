@@ -1,0 +1,68 @@
+# ============================================================
+# CI/CD Pipeline — {{ project_name }}
+# Stack: Node.js 22 + Express + TypeScript
+# Trigger: push a main/develop
+# ============================================================
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+
+env:
+  NODE_VERSION: "22"
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: {% raw %}${{ env.NODE_VERSION }}{% endraw %}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lockfile integrity
+        run: npx lockfile-lint --path package-lock.json --type npm --allowed-hosts npm
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Build
+        run: npm run build
+
+      - name: Test with coverage
+        run: npm run test:coverage
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+
+  docker:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t {{ project_name }}:{% raw %}${{ github.sha }}{% endraw %} .
+          docker tag {{ project_name }}:{% raw %}${{ github.sha }}{% endraw %} {{ project_name }}:latest

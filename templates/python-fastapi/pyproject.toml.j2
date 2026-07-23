@@ -1,0 +1,120 @@
+[project]
+name = "{{ project_name }}"
+version = "{{ api_version }}"
+description = "{{ api_description }}"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.32.1",
+    "pydantic==2.10.4",
+    "pydantic-settings==2.6.1",
+    "sqlalchemy[asyncio]==2.0.36",
+    "asyncpg==0.30.0",
+    "greenlet==3.1.1",
+    "python-dotenv==1.0.1",
+    "structlog==24.4.0",
+    "boto3==1.35.81",
+{% if auth_strategy == "oauth2-resource-server" %}
+    "python-jose[cryptography]==3.3.0",
+{% elif auth_strategy == "machine-to-machine" %}
+    "python-jose[cryptography]==3.3.0",
+{% endif %}
+{% if cache == "redis" %}
+    "redis[hiredis]==5.2.1",
+{% endif %}
+{% if integrations.uses_s3 %}
+    "aiobotocore==2.15.2",
+{% endif %}
+{% if integrations.uses_sqs %}
+    "aiobotocore==2.15.2",
+{% endif %}
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.24.0",
+    "pytest-cov==6.0.0",
+    "httpx==0.28.1",
+    "factory-boy==3.3.1",
+    "respx==0.22.0",
+    "ruff==0.8.4",
+    "mypy==1.13.0",
+{% if use_pre_commit %}
+    "pre-commit==4.0.1",
+{% endif %}
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.24.0",
+    "pytest-cov==6.0.0",
+    "httpx==0.28.1",
+    "factory-boy==3.3.1",
+    "respx==0.22.0",
+    "ruff==0.8.4",
+    "mypy==1.13.0",
+{% if use_pre_commit %}
+    "pre-commit==4.0.1",
+{% endif %}
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "S",      # bandit (seguridad)
+    "B",      # bugbear
+    "A",      # builtins
+    "C4",     # comprehensions
+    "DTZ",    # datetime timezone
+    "T20",    # print statements
+    "RUF",    # ruff-specific
+    "ASYNC",  # async rules
+    "PTH",    # pathlib
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+{% if mypy_strict %}
+strict = true
+{% else %}
+strict = false
+{% endif %}
+warn_return_any = true
+warn_unused_configs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests", "src"]
+addopts = "--strict-markers -ra"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*", "src/config/*"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true

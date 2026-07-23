@@ -1,0 +1,66 @@
+# ============================================================
+# CI/CD Pipeline — {{ project_name }}
+# Stack: Python 3.12 + FastAPI + uv
+# Trigger: push a main/develop
+# ============================================================
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: {% raw %}${{ env.PYTHON_VERSION }}{% endraw %}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Lint (ruff)
+        run: uv run ruff check src/
+
+      - name: Format check (ruff)
+        run: uv run ruff format --check src/
+
+      - name: Type check (mypy)
+        run: uv run mypy src/
+
+      - name: Tests with coverage
+        run: uv run pytest --cov --cov-report=xml --cov-report=html
+
+      - name: Security audit
+        run: uv run pip-audit
+        continue-on-error: true
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+
+  docker:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t {{ project_name }}:{% raw %}${{ github.sha }}{% endraw %} .
+          docker tag {{ project_name }}:{% raw %}${{ github.sha }}{% endraw %} {{ project_name }}:latest

@@ -1,0 +1,28 @@
+"""Fixtures globales para tests — {{ project_name }}."""
+
+from collections.abc import AsyncGenerator
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from src.main import create_app
+
+
+@pytest.fixture
+async def app():
+    """Instancia de la aplicacion FastAPI para tests."""
+    return create_app()
+
+
+@pytest.fixture
+async def client(app) -> AsyncGenerator[AsyncClient, None]:
+    """Cliente httpx async para tests de integracion.
+
+    Yields:
+        AsyncClient configurado contra la app FastAPI.
+    """
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as ac:
+        yield ac

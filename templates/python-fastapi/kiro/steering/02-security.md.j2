@@ -1,0 +1,58 @@
+---
+inclusion: always
+---
+# Seguridad
+
+> Generado por MCP_INIT_MS_SegurosBolivar. No editar manualmente.
+
+## Input — Zero Trust
+
+- Todo input es malicioso hasta validado
+- Validar tipo, formato, longitud, rango, enum, presencia en servidor SIEMPRE
+- Normalizar inputs (trim, unicode)
+- Limitar body, header, query param, file sizes
+- Rechazar keys inesperadas
+- Formatos estrictos (UUID v4, ISO-8601)
+
+## Inyección
+
+- Prepared statements / queries parametrizadas SIEMPRE
+- Nunca concatenar strings para SQL
+- En ORMs, nunca `.raw()` con input sin sanitizar
+- Para NoSQL, allowlist de campos filtrables
+- Nunca `exec("cmd " + userInput)` ni `shell=True`
+
+## SSRF
+
+Allowlist de dominios, bloquear IPs privadas, HTTPS only, timeouts estrictos.
+
+## Path Traversal
+
+Canonicalizar con realpath, verificar directorio permitido, bloquear "..".
+
+## Auth
+
+Tokens short-lived + refresh rotation, cookies Secure + HttpOnly + SameSite, rate limit + lockouts.
+
+## BOLA/IDOR
+
+Verificar permisos en cada request, nunca confiar en IDs del cliente, verificación explícita owner/tenant/org.
+
+## Headers obligatorios
+
+HSTS, CSP, X-Content-Type-Options: nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy. Forzar HTTPS.
+
+## Secrets
+
+Nunca en código. Via Secret Manager o env vars. Comunicación por DNS.
+
+## Information Leakage
+
+- No PII/secrets en logs, traces, errors, analytics
+- Responses con DTOs allowlisted, nunca objetos completos
+- Masking de campos sensibles (`****1234`)
+- Nunca stack traces al cliente
+
+## Dependencias
+
+Pinned exact versions. Auditar en pipeline. Generar SBOM.

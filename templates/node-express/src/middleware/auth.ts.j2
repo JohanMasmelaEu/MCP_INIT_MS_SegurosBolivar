@@ -1,0 +1,74 @@
+{% if auth_strategy == "oauth2-resource-server" %}
+import type { Request, Response, NextFunction } from "express";
+import { passport } from "../config/security.js";
+import { errorResponse } from "../commons/api-response.dto.js";
+
+/**
+ * Middleware de autenticacion via Passport JWT.
+ * Valida el Bearer token y adjunta el usuario al request.
+ */
+export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
+  passport.authenticate("jwt", { session: false }, (err: Error | null, user: unknown) => {
+    if (err || !user) {
+      res.status(401).json(errorResponse("NO_AUTORIZADO", "Token invalido o ausente"));
+      return;
+    }
+    req.user = user;
+    next();
+  })(req, res, next);
+}
+
+{% elif auth_strategy == "api-gateway-delegated" %}
+import type { Request, Response, NextFunction } from "express";
+import { extractGatewayUser } from "../config/security.js";
+import { errorResponse } from "../commons/api-response.dto.js";
+
+/**
+ * Middleware que extrae usuario de headers inyectados por API Gateway.
+ */
+export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const user = extractGatewayUser(req.headers as Record<string, string | undefined>);
+  if (!user) {
+    res.status(401).json(errorResponse("NO_AUTORIZADO", "Headers de autenticacion ausentes"));
+    return;
+  }
+  req.user = user;
+  next();
+}
+
+{% elif auth_strategy == "machine-to-machine" %}
+import type { Request, Response, NextFunction } from "express";
+import { verifyM2MToken } from "../config/security.js";
+import { errorResponse } from "../commons/api-response.dto.js";
+
+/**
+ * Middleware para verificar tokens M2M (client_credentials).
+ */
+export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json(errorResponse("NO_AUTORIZADO", "Token ausente"));
+    return;
+  }
+  const token = authHeader.slice(7);
+  const result = verifyM2MToken(token);
+  if (!result) {
+    res.status(401).json(errorResponse("NO_AUTORIZADO", "Token M2M invalido"));
+    return;
+  }
+  req.user = result;
+  next();
+}
+
+{% else %}
+import type { Request, Response, NextFunction } from "express";
+
+/**
+ * Auth middleware placeholder (strategy: deferred).
+ * TODO: Implementar estrategia de autenticacion.
+ */
+export function authMiddleware(_req: Request, _res: Response, next: NextFunction): void {
+  // No-op: auth no configurada
+  next();
+}
+{% endif %}

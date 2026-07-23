@@ -1,0 +1,29 @@
+/**
+ * DTO de respuesta para {{ m.entity_name }}.
+ * Define la estructura que el API retorna al cliente.
+ */
+export interface {{ m.entity_name }}Response {
+  id: number;
+{% if m.has_cod_field %}
+  cod{{ m.entity_name }}: string;
+{% endif %}
+{% for field in m.fields %}
+{% if field.field_type.value == "String" %}
+  {{ field.name }}: string{% if field.nullable %} | null{% endif %};
+{% elif field.field_type.value == "Long" or field.field_type.value == "Integer" %}
+  {{ field.name }}: number{% if field.nullable %} | null{% endif %};
+{% elif field.field_type.value == "Boolean" %}
+  {{ field.name }}: boolean{% if field.nullable %} | null{% endif %};
+{% elif field.field_type.value == "BigDecimal" %}
+  {{ field.name }}: string{% if field.nullable %} | null{% endif %};
+{% elif field.field_type.value == "LocalDate" or field.field_type.value == "LocalDateTime" %}
+  {{ field.name }}: string{% if field.nullable %} | null{% endif %};
+{% elif field.field_type.value == "UUID" %}
+  {{ field.name }}: string{% if field.nullable %} | null{% endif %};
+{% endif %}
+{% endfor %}
+  creadoPor: string;
+  fechaCreacion: string;
+  modificadoPor: string | null;
+  fechaModificacion: string | null;
+}

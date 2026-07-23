@@ -1,0 +1,61 @@
+"""Configuracion de base de datos — AsyncEngine + AsyncSession factory."""
+
+from collections.abc import AsyncGenerator
+
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+
+from src.config.settings import get_settings
+
+_engine: AsyncEngine | None = None
+_session_factory: async_sessionmaker[AsyncSession] | None = None
+
+
+async def init_db() -> None:
+    """Inicializa el engine y session factory. Llamado en lifespan startup."""
+    global _engine, _session_factory  # noqa: PLW0603
+
+    settings = get_settings()
+    _engine = create_async_engine(
+        settings.database_url,
+        pool_size=settings.db_pool_max,
+        pool_pre_ping=True,
+        echo=settings.app_env == "local",
+    )
+    _session_factory = async_sessionmaker(
+        bind=_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+
+async def close_db() -> None:
+    """Cierra el engine. Llamado en lifespan shutdown."""
+    global _engine  # noqa: PLW0603
+
+    if _engine:
+        await _engine.dispose()
+        _engine = None
+
+
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency que provee una sesion async por request.
+
+    Yields:
+        AsyncSession lista para usar en repositories.
+    """
+    if _session_factory is None:
+        msg = "Database no inicializada. Verificar lifespan."
+        raise RuntimeError(msg)
+
+    async with _session_factory() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

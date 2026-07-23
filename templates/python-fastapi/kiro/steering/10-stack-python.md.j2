@@ -1,0 +1,37 @@
+---
+inclusion: always
+---
+# Stack Python/FastAPI
+
+> Generado por MCP_INIT_MS_SegurosBolivar. No editar manualmente.
+
+| Componente | Detalle |
+|-----------|---------|
+| Python | 3.12+ |
+| Package Manager | uv |
+| Framework | FastAPI 0.115+ |
+| ORM | SQLAlchemy 2.x async (asyncpg) |
+| Validacion | Pydantic v2 |
+| Docs API | FastAPI /docs (Swagger) + /redoc |
+| Testing | pytest + httpx + respx |
+| Coverage | pytest-cov (min 80%) |
+| Error handling | BolivarBusinessError + exception handlers |
+| Logs | structlog (JSON estructurado) + contextvars (correlation-id) |
+| Linting | Ruff (lint + format + isort + bandit) |
+| Type check | mypy (strict: {{ mypy_strict }}) |
+{% if use_pre_commit %}
+| Pre-commit | ruff + mypy en staged files |
+{% endif %}
+| AWS | boto3 (SSM Parameter Store) |
+
+## Reglas criticas
+
+- `mypy --strict` — no negociable
+- Nunca `Any` — usar `object` o Protocol + narrowing
+- Nunca `# type: ignore` sin justificacion
+- Pydantic v2 valida TODA entrada (body, query, path params)
+- Nunca `**kwargs` o `dict` sin tipo en endpoints
+- Secrets via env vars / SSM — jamas en codigo
+- `uv sync` para instalar, `uv run` para ejecutar
+- Dependencias pinned en lockfile
+- ruff con regla S (bandit) activa

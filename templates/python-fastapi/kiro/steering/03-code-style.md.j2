@@ -1,0 +1,48 @@
+---
+inclusion: always
+---
+# Código Limpio
+
+> Generado por MCP_INIT_MS_SegurosBolivar. No editar manualmente.
+
+## Principios
+
+DRY, SOLID, KISS. Código legible primero.
+
+## Funciones
+
+Max ~20 líneas. Single purpose. Max 3 params. Complejidad ciclomática max 15.
+
+## Type safety
+
+Type hints/strict types obligatorios. Nunca `any`, `Object`, `dict` sin tipo.
+
+## Naming
+
+Descriptivo. Booleans: `isActive`/`hasPermission`. Clases PascalCase. Métodos/variables camelCase (Java/Node) o snake_case (Python). Constantes UPPER_SNAKE_CASE.
+
+## Imports
+
+Orden: stdlib → third-party → local. Específicos. Sin circulares.
+
+## Dead code
+
+Cero. Git es el historial.
+
+## Documentación
+
+Docstring/Javadoc en todo método público no trivial.
+
+## SonarQube
+
+Min 80% coverage. Zero critical/blocker. Complejidad max 15.
+
+## Trash to Delete Trash — Definición de código basura
+
+| Severidad | Qué es |
+|-----------|--------|
+| **Bloquea (sin override)** | Secrets hardcoded, SQL concatenado con user input |
+| **Requiere justificación** | TODO/FIXME sin resolver, código commented-out, métodos > 30 líneas, duplicación, System.out/console.log/print de debug, catch vacíos |
+| **Recomendación** | Imports no usados, variables sin uso, comentarios redundantes, métodos privados no llamados |
+
+**Trash Inspector:** Herramienta auxiliar (no gate bloqueante). Se sugiere al usuario ejecutarlo al terminar una funcionalidad. El usuario decide si la usa. Cuando se ejecuta, muestra hallazgos y recomendaciones sin bloquear.

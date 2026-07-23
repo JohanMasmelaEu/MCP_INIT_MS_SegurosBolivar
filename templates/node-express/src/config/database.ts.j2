@@ -1,0 +1,35 @@
+import pg from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { config } from "./index.js";
+import { logger } from "./logger.js";
+
+const { Pool } = pg;
+
+/**
+ * Pool de conexiones PostgreSQL configurado desde env vars.
+ */
+export const pool = new Pool({
+  host: config.DB_HOST,
+  port: config.DB_PORT,
+  database: config.DB_NAME,
+  user: config.DB_USER,
+  password: config.DB_PASSWORD,
+  min: config.DB_POOL_MIN,
+  max: config.DB_POOL_MAX,
+  ssl: config.DB_SSL ? { rejectUnauthorized: false } : undefined,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 5_000,
+});
+
+pool.on("error", (err) => {
+  logger.error({ err }, "Error inesperado en pool PostgreSQL");
+});
+
+/**
+ * Cliente Drizzle ORM conectado al pool.
+ */
+export const db = drizzle(pool, {
+  logger: config.NODE_ENV === "local",
+});
+
+export type DrizzleClient = typeof db;

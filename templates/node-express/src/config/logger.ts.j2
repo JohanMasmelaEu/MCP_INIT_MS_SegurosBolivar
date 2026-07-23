@@ -1,0 +1,31 @@
+import pino from "pino";
+import { config } from "./index.js";
+import { getCorrelationId } from "../middleware/correlation-id.js";
+
+/**
+ * Logger Pino estructurado con correlation-id automatico.
+ *
+ * - Local: formato legible con pino-pretty (instalado como devDependency).
+ * - Produccion: JSON estructurado para Datadog.
+ */
+export const logger = pino({
+  name: "{{ dd_service }}",
+  level: config.LOG_LEVEL,
+  transport: config.NODE_ENV === "local"
+    ? { target: "pino-pretty", options: { colorize: true, translateTime: "HH:MM:ss" } }
+    : undefined,
+  formatters: {
+    level(label) {
+      return { level: label };
+    },
+  },
+  mixin() {
+    const correlationId = getCorrelationId();
+    return correlationId ? { correlationId } : {};
+  },
+  serializers: {
+    err: pino.stdSerializers.err,
+    req: pino.stdSerializers.req,
+    res: pino.stdSerializers.res,
+  },
+});

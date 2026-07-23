@@ -190,6 +190,14 @@ def _flatten_categorized_config(config_dict: dict) -> dict:
     if "security_details" in config_dict:
         flat.update(config_dict["security_details"])
 
+    # node_specific → campos planos (typescript_strict, use_husky, npm_scope, use_npmrc)
+    if "node_specific" in config_dict:
+        flat.update(config_dict["node_specific"])
+
+    # python_specific → campos planos (mypy_strict, use_pre_commit)
+    if "python_specific" in config_dict:
+        flat.update(config_dict["python_specific"])
+
     # Si quedo vacio despues del flatten, el input no era categorizado ni plano
     if not flat:
         return config_dict

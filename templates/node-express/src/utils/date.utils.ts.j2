@@ -1,0 +1,43 @@
+/**
+ * Utilidades de fecha ISO-8601.
+ */
+
+/**
+ * Retorna la fecha actual en formato ISO-8601 (UTC).
+ */
+export function nowIso(): string {
+  return new Date().toISOString();
+}
+
+/**
+ * Formatea una fecha a ISO-8601 string (solo fecha, sin hora).
+ */
+export function toDateString(date: Date): string {
+  return date.toISOString().split("T")[0] ?? "";
+}
+
+/**
+ * Parsea un string ISO-8601 a Date.
+ * Retorna null si el formato es invalido.
+ */
+export function parseIsoDate(value: string): Date | null {
+  const date = new Date(value);
+  if (isNaN(date.getTime())) {
+    return null;
+  }
+  return date;
+}
+
+/**
+ * Verifica si una fecha esta en el pasado.
+ */
+export function isPast(date: Date): boolean {
+  return date.getTime() < Date.now();
+}
+
+/**
+ * Verifica si una fecha esta en el futuro.
+ */
+export function isFuture(date: Date): boolean {
+  return date.getTime() > Date.now();
+}

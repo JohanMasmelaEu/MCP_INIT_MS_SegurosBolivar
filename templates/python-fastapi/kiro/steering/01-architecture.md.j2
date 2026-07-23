@@ -1,0 +1,104 @@
+---
+inclusion: always
+---
+# Arquitectura Backend — {{ project_name }}
+
+> Generado por MCP_INIT_MS_SegurosBolivar. No editar manualmente.
+
+**Alcance:** Este proyecto es un microservicio backend. Frontend y base de datos son responsabilidad de otros repos/MCPs.
+
+## Estructura del código — Organización por dominio de negocio
+
+Sencillo, ordenado, y preparado para crecer sin reescribir.
+
+- Hoy puede tener un solo dominio → funciona limpio
+- Mañana se agregan más dominios → cada uno en su carpeta, sin pisar los demás
+- No es DDD formal (no requiere agregados, domain events, value objects)
+- Es: cada funcionalidad de negocio vive junta y separada de las demás
+
+```
+{{ base_package | replace('.', '/') }}/
+├── Application.java
+├── config/              ← configuración general del MS
+├── commons/             ← objetos compartidos entre dominios (si aplica)
+├── errorhandling/       ← manejo global de excepciones
+├── utils/               ← utilidades transversales
+{% for module in modules %}
+└── {{ module.module_name }}/
+    ├── controller/
+    ├── dto/
+    ├── services/        (interface + impl)
+    └── repository/
+{% endfor %}
+```
+
+Agregar un nuevo dominio:
+
+```
+└── <nuevo-dominio>/     ← se agrega sin tocar los existentes
+    ├── controller/
+    ├── dto/
+    ├── services/
+    └── repository/
+```
+
+## Reglas de estructura
+
+- NO agrupar por tipo técnico (no "todos los controllers juntos")
+- SI agrupar por funcionalidad de negocio
+- Cada dominio es independiente, no depende directamente de otros
+- Va a `commons/` si: (1) lo usa más de 1 dominio, o (2) el usuario lo declara desde el inicio como transversal. En el caso (2), el agente debe informar explícitamente: *"Este espacio es para herramientas/componentes transversales — ¿confirmas que aplica aquí?"* — decisión consciente, no automática ni a juicio libre del agente.
+
+## Contrato entre dominios
+
+- Cada dominio expone un único punto de entrada público (su API pública)
+- Lo interno (repository, servicios internos, entities) es privado — no importable desde otro dominio
+- Comunicación directa y síncrona entre dominios vía su punto de entrada público (sin eventos por ahora)
+- Dependencias unidireccionales (jerarquía explícita, validada por linter)
+- Si mañana se extrae un dominio a su propio despliegue, solo cambia el transporte — la forma se mantiene
+
+## Resiliencia
+
+- Circuit breakers en llamadas externas
+- Async para operaciones pesadas (retornar 202 + job ID)
+- Fail-fast con timeouts bajos para transacciones cortas
+- Rate limiting para proteger componentes core
+
+## Concurrencia y transacciones (nivel básico)
+
+- POST que crea recursos: debe soportar `Idempotency-Key` o validar clave natural antes de insertar (evitar duplicados en reintentos)
+- Entidades propensas a edición concurrente: incluir campo `version`, UPDATE condicionado a esa versión (409 si no coincide)
+- Escrituras multi-tabla dentro de un mismo dominio: siempre en transacción nativa del ORM
+- Escrituras cross-dominio: no se fuerza transacción distribuida; se documenta como consistencia eventual o se resuelve por orden de operaciones
+- Fuera de alcance: Saga, 2PC, orquestadores, locks distribuidos
+
+## API First
+
+- OpenAPI spec como source of truth
+- Versionamiento en URL
+- Backward compatibility durante deprecación (ver sección en `00-org-conventions.md`)
+- Contratos exportables (OpenAPI, JSON Schema) para no bloquear futura integración con otros MCPs
+
+## Ownership de schema y migraciones
+
+- El repo de backend define entities como modelo de dominio en código, pero NO genera ni ejecuta migraciones (no incluye Flyway/Liquibase/Alembic)
+- Todo cambio de entity que implique cambio de schema se declara explícitamente en el plan como "requiere migración en repo de DB", sin ejecutarlo
+- El traslado de la propuesta al repo de DB es una decisión manual del usuario
+- El MCP de DB (futuro) es el único que genera y aplica migraciones
+
+## Governance
+
+- Dependencias exclusivamente de JFrog Artifactory
+- Ambientes separados (Dev, Stage, Prod)
+- Graceful shutdown
+- Solo stack tecnológico aprobado
+
+## Connection pooling (DB)
+
+- Tamaño de pool y timeouts se leen de variable de entorno al declarar la conexión backend-DB.
+- Gestionable por infra vía Parameter Store/Secret Manager. Si no está definida, aplica un valor default declarado en el steering del stack correspondiente.
+- El arquitecto define el rango permitido; el desarrollador ajusta el valor dentro de ese rango vía la variable de entorno.
+
+## File upload / multipart
+
+- No hay estándar genérico del MCP para esto. Es decisión de arquitectura por proyecto: el arquitecto define si aplica carga de archivos, qué tipos se permiten y dónde se almacenan.

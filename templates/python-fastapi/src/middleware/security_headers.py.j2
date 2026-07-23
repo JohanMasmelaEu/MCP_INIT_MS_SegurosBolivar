@@ -1,0 +1,31 @@
+"""Middleware de security headers."""
+
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.requests import Request
+from starlette.responses import Response
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Agrega headers de seguridad a todas las respuestas.
+
+    Headers incluidos:
+    - Strict-Transport-Security (HSTS)
+    - X-Content-Type-Options
+    - X-Frame-Options
+    - Referrer-Policy
+    - Permissions-Policy
+    - Cache-Control
+    """
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Agrega security headers a la respuesta."""
+        response = await call_next(request)
+
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Cache-Control"] = "no-store"
+
+        return response

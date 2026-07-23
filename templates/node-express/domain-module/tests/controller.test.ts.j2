@@ -1,0 +1,81 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import request from "supertest";
+import { createApp } from "../../app.js";
+
+vi.mock("../{{ m.module_name }}.service.js");
+
+describe("{{ m.entity_name }}Controller — Integration", () => {
+  const app = createApp();
+
+  describe("POST {{ context_path }}/api/v1/{{ m.resource_path_resolved }}", () => {
+    it("debe crear un {{ m.entity_name }} y retornar 201", async () => {
+      // Arrange
+      const payload = {
+{% for field in m.fields %}
+{% if not field.nullable %}
+{% if field.field_type.value == "String" %}
+        {{ field.name }}: "test-value",
+{% elif field.field_type.value == "Long" or field.field_type.value == "Integer" %}
+        {{ field.name }}: 1,
+{% elif field.field_type.value == "Boolean" %}
+        {{ field.name }}: true,
+{% elif field.field_type.value == "BigDecimal" %}
+        {{ field.name }}: 100.50,
+{% elif field.field_type.value == "LocalDate" %}
+        {{ field.name }}: "2024-01-01",
+{% elif field.field_type.value == "LocalDateTime" %}
+        {{ field.name }}: "2024-01-01T00:00:00Z",
+{% elif field.field_type.value == "UUID" %}
+        {{ field.name }}: "550e8400-e29b-41d4-a716-446655440000",
+{% endif %}
+{% endif %}
+{% endfor %}
+      };
+
+      // Act
+      const response = await request(app)
+        .post("{{ context_path }}/api/v1/{{ m.resource_path_resolved }}")
+        .send(payload)
+        .set("Content-Type", "application/json");
+
+      // Assert
+      expect(response.status).toBe(201);
+      expect(response.body.codigo).toBe("OK");
+    });
+
+    it("debe retornar 400 con payload invalido", async () => {
+      // Act
+      const response = await request(app)
+        .post("{{ context_path }}/api/v1/{{ m.resource_path_resolved }}")
+        .send({})
+        .set("Content-Type", "application/json");
+
+      // Assert
+      expect(response.status).toBe(400);
+      expect(response.body.codigo).toBe("VALIDACION_ERROR");
+    });
+  });
+
+  describe("GET {{ context_path }}/api/v1/{{ m.resource_path_resolved }}", () => {
+    it("debe listar {{ m.entity_name }} con paginacion", async () => {
+      // Act
+      const response = await request(app)
+        .get("{{ context_path }}/api/v1/{{ m.resource_path_resolved }}?page=0&size=10");
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.body.codigo).toBe("OK");
+    });
+  });
+
+  describe("GET {{ context_path }}/api/v1/{{ m.resource_path_resolved }}/:id", () => {
+    it("debe retornar 404 cuando no existe", async () => {
+      // Act
+      const response = await request(app)
+        .get("{{ context_path }}/api/v1/{{ m.resource_path_resolved }}/999");
+
+      // Assert
+      expect(response.status).toBe(404);
+    });
+  });
+});

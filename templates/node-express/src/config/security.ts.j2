@@ -1,0 +1,91 @@
+{% if auth_strategy == "oauth2-resource-server" %}
+import passport from "passport";
+import { Strategy as JwtStrategy, ExtractJwt, type StrategyOptionsWithoutRequest } from "passport-jwt";
+import { config } from "./index.js";
+import { logger } from "./logger.js";
+
+/**
+ * Configuracion de Passport JWT para OAuth2 Resource Server.
+ * Valida JWT contra JWKS del IdP.
+ */
+const jwtOptions: StrategyOptionsWithoutRequest = {
+  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+  secretOrKeyProvider: (_req, rawJwtToken, done) => {
+    // En produccion, usar jwks-rsa para rotar keys
+    // Para local, usar secret estatico del mock-oauth
+    const secret = process.env.OAUTH_SECRET ?? "mock-secret-for-local-dev";
+    done(null, secret);
+  },
+  issuer: config.OAUTH_ISSUER,
+  audience: config.OAUTH_AUDIENCE,
+  algorithms: ["RS256", "HS256"],
+};
+
+passport.use(
+  "jwt",
+  new JwtStrategy(jwtOptions, (payload, done) => {
+    logger.debug({ sub: payload.sub }, "JWT validado");
+    return done(null, {
+      id: payload.sub,
+      roles: payload.roles ?? [],
+      scope: payload.scope ?? "",
+    });
+  }),
+);
+
+export { passport };
+
+{% elif auth_strategy == "api-gateway-delegated" %}
+/**
+ * Auth delegada a API Gateway.
+ * Los headers X-User-Id y X-User-Roles son inyectados por el gateway.
+ * No se valida JWT localmente.
+ */
+export interface GatewayUser {
+  id: string;
+  roles: string[];
+}
+
+export function extractGatewayUser(headers: Record<string, string | undefined>): GatewayUser | null {
+  const userId = headers["x-user-id"];
+  if (!userId) {
+    return null;
+  }
+  return {
+    id: userId,
+    roles: (headers["x-user-roles"] ?? "").split(",").filter(Boolean),
+  };
+}
+
+{% elif auth_strategy == "machine-to-machine" %}
+import jwt from "jsonwebtoken";
+import { logger } from "./logger.js";
+
+/**
+ * Verificacion de client_credentials token para comunicacion M2M.
+ */
+export function verifyM2MToken(token: string): { clientId: string; scope: string } | null {
+  try {
+    const decoded = jwt.verify(token, process.env.M2M_SECRET ?? "m2m-secret-local") as {
+      client_id: string;
+      scope: string;
+    };
+    return { clientId: decoded.client_id, scope: decoded.scope };
+  } catch (err) {
+    logger.warn({ err }, "Token M2M invalido");
+    return null;
+  }
+}
+
+{% else %}
+/**
+ * Auth strategy: deferred.
+ * TODO: Definir estrategia de autenticacion y configurar aqui.
+ *
+ * Opciones disponibles:
+ * - oauth2-resource-server: JWT contra JWKS del IdP
+ * - api-gateway-delegated: confiar en headers del API Gateway
+ * - machine-to-machine: client_credentials grant
+ */
+export const AUTH_NOT_CONFIGURED = true;
+{% endif %}

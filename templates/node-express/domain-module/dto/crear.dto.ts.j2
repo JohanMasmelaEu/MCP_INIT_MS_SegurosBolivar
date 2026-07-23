@@ -1,0 +1,27 @@
+import { z } from "zod";
+
+/**
+ * Schema Zod para creacion de {{ m.entity_name }}.
+ * Valida todos los campos requeridos del payload.
+ */
+export const crear{{ m.entity_name }}Schema = z.object({
+{% for field in m.fields %}
+{% if field.field_type.value == "String" %}
+  {{ field.name }}: z.string(){% if not field.nullable %}.min(1){% endif %}{% if field.length %}.max({{ field.length }}){% endif %}.trim(){% if field.nullable %}.optional(){% endif %},
+{% elif field.field_type.value == "Long" or field.field_type.value == "Integer" %}
+  {{ field.name }}: z.number().int(){% if field.nullable %}.optional(){% endif %},
+{% elif field.field_type.value == "Boolean" %}
+  {{ field.name }}: z.boolean(){% if field.nullable %}.optional(){% endif %},
+{% elif field.field_type.value == "BigDecimal" %}
+  {{ field.name }}: z.number().positive(){% if field.nullable %}.optional(){% endif %},
+{% elif field.field_type.value == "LocalDate" %}
+  {{ field.name }}: z.string().date(){% if field.nullable %}.optional(){% endif %},
+{% elif field.field_type.value == "LocalDateTime" %}
+  {{ field.name }}: z.string().datetime(){% if field.nullable %}.optional(){% endif %},
+{% elif field.field_type.value == "UUID" %}
+  {{ field.name }}: z.string().uuid(){% if field.nullable %}.optional(){% endif %},
+{% endif %}
+{% endfor %}
+});
+
+export type Crear{{ m.entity_name }}Dto = z.infer<typeof crear{{ m.entity_name }}Schema>;

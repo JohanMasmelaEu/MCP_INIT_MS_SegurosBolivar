@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Implementation Tracker — registrar progreso",
+      "trigger": "PostToolUse",
+      "matcher": "fs_write|str_replace|fs_append",
+      "action": {
+        "type": "agent",
+        "prompt": "Si hay un plan activo en .kiro/implementation-log.json con tareas 'in_progress' o 'pending', actualiza el tracker:\n1. Si es la primera escritura de una tarea pendiente: marca started_at con timestamp actual.\n2. Si la escritura completa una tarea del plan: marca completed_at, registra files_modified y lines_added/removed.\n3. Recalcula metrics del plan.\n\nSi no hay plan activo, no hagas nada. No preguntes al usuario — el tracking es silencioso."
+      }
+    }
+  ]
+}

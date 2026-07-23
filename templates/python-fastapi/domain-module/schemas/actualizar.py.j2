@@ -1,0 +1,25 @@
+"""Schema de actualizacion para {{ m.entity_name }}."""
+
+from pydantic import BaseModel, Field
+
+
+class Actualizar{{ m.entity_name }}Schema(BaseModel):
+    """Datos opcionales para actualizar un {{ m.entity_name }} (PATCH semantics)."""
+
+{% for field in m.fields %}
+{% if field.field_type.value == "String" %}
+    {{ field.name }}: str | None = Field(default=None{% if field.length %}, max_length={{ field.length }}{% endif %})
+{% elif field.field_type.value == "Long" or field.field_type.value == "Integer" %}
+    {{ field.name }}: int | None = Field(default=None)
+{% elif field.field_type.value == "Boolean" %}
+    {{ field.name }}: bool | None = Field(default=None)
+{% elif field.field_type.value == "BigDecimal" %}
+    {{ field.name }}: float | None = Field(default=None, gt=0)
+{% elif field.field_type.value == "LocalDate" %}
+    {{ field.name }}: str | None = Field(default=None)
+{% elif field.field_type.value == "LocalDateTime" %}
+    {{ field.name }}: str | None = Field(default=None)
+{% elif field.field_type.value == "UUID" %}
+    {{ field.name }}: str | None = Field(default=None)
+{% endif %}
+{% endfor %}

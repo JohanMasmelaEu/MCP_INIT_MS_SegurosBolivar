@@ -1,0 +1,23 @@
+/**
+ * Contrato de respuesta API estandar.
+ * Todas las respuestas del microservicio siguen este formato.
+ */
+export interface ApiResponse<T> {
+  codigo: string;
+  mensaje: string;
+  data: T | null;
+}
+
+/**
+ * Helper para construir respuestas exitosas.
+ */
+export function successResponse<T>(data: T, mensaje = "Operacion exitosa"): ApiResponse<T> {
+  return { codigo: "OK", mensaje, data };
+}
+
+/**
+ * Helper para construir respuestas de error.
+ */
+export function errorResponse(codigo: string, mensaje: string): ApiResponse<null> {
+  return { codigo, mensaje, data: null };
+}

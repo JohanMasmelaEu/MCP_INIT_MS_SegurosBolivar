@@ -1,0 +1,90 @@
+import { eq, ilike, and, sql, type SQL } from "drizzle-orm";
+import { db } from "../config/database.js";
+import { {{ m.module_name }}Table } from "./{{ m.module_name }}.schema.js";
+import type { PaginationParams } from "../commons/pagination.dto.js";
+
+/**
+ * Repository para {{ m.entity_name }} usando Drizzle ORM.
+ * Encapsula el acceso a datos con queries parametrizados.
+ */
+export class {{ m.entity_name }}Repository {
+  /**
+   * Inserta un nuevo registro.
+   */
+  async insertar(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const [result] = await db
+      .insert({{ m.module_name }}Table)
+      .values(data as typeof {{ m.module_name }}Table.$inferInsert)
+      .returning();
+    return result as Record<string, unknown>;
+  }
+
+  /**
+   * Busca un registro por ID.
+   */
+  async buscarPorId(id: number): Promise<Record<string, unknown> | null> {
+    const [result] = await db
+      .select()
+      .from({{ m.module_name }}Table)
+      .where(eq({{ m.module_name }}Table.id, id))
+      .limit(1);
+    return (result as Record<string, unknown>) ?? null;
+  }
+
+  /**
+   * Lista registros con filtros dinamicos y paginacion.
+   */
+  async listarConFiltros(
+    filtros: Record<string, unknown>,
+    paginacion: PaginationParams,
+  ): Promise<{ data: Record<string, unknown>[]; total: number }> {
+    const conditions: SQL[] = [];
+
+{% for field in m.fields %}
+{% if field.field_type.value == "String" %}
+    if (filtros.{{ field.name }}) {
+      conditions.push(ilike({{ m.module_name }}Table.{{ field.name }}, `%${String(filtros.{{ field.name }})}%`));
+    }
+{% endif %}
+{% endfor %}
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const data = await db
+      .select()
+      .from({{ m.module_name }}Table)
+      .where(whereClause)
+      .limit(paginacion.size)
+      .offset(paginacion.page * paginacion.size);
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from({{ m.module_name }}Table)
+      .where(whereClause);
+
+    const total = Number(countResult?.count ?? 0);
+
+    return { data: data as Record<string, unknown>[], total };
+  }
+
+  /**
+   * Actualiza un registro existente.
+   */
+  async actualizar(id: number, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const [result] = await db
+      .update({{ m.module_name }}Table)
+      .set(data as Partial<typeof {{ m.module_name }}Table.$inferInsert>)
+      .where(eq({{ m.module_name }}Table.id, id))
+      .returning();
+    return result as Record<string, unknown>;
+  }
+
+  /**
+   * Elimina un registro por ID.
+   */
+  async eliminar(id: number): Promise<void> {
+    await db
+      .delete({{ m.module_name }}Table)
+      .where(eq({{ m.module_name }}Table.id, id));
+  }
+}

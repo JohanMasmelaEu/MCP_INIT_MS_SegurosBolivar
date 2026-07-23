@@ -1,0 +1,25 @@
+import type { Request, Response, NextFunction } from "express";
+import { type ZodSchema } from "zod";
+
+/**
+ * Middleware factory para validar request body, query o params con Zod.
+ *
+ * Uso:
+ *   router.post("/", validate(crearSchema, "body"), controller.crear);
+ *   router.get("/", validate(filtrosSchema, "query"), controller.listar);
+ */
+export function validate(schema: ZodSchema, source: "body" | "query" | "params" = "body") {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const data = req[source];
+    const result = schema.safeParse(data);
+
+    if (!result.success) {
+      // Lanza ZodError que sera capturado por error-handler
+      throw result.error;
+    }
+
+    // Reemplazar con datos parseados (trimmed, transformed)
+    req[source] = result.data;
+    next();
+  };
+}

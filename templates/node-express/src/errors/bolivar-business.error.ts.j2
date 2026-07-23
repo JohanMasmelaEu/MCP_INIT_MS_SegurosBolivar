@@ -1,0 +1,44 @@
+import { ErrorType } from "./error-types.enum.js";
+
+/**
+ * Opciones para crear un error de negocio.
+ */
+export interface BusinessErrorOptions {
+  codigo: string;
+  mensaje: string;
+  categoria: ErrorType;
+  httpStatus: number;
+  detalles?: Record<string, unknown>;
+}
+
+/**
+ * Error de negocio custom de Seguros Bolivar.
+ * Incluye codigo, categoria y HTTP status para el error handler.
+ */
+export class BolivarBusinessError extends Error {
+  readonly codigo: string;
+  readonly categoria: ErrorType;
+  readonly httpStatus: number;
+  readonly detalles?: Record<string, unknown>;
+
+  constructor(options: BusinessErrorOptions) {
+    super(options.mensaje);
+    this.name = "BolivarBusinessError";
+    this.codigo = options.codigo;
+    this.mensaje = options.mensaje;
+    this.categoria = options.categoria;
+    this.httpStatus = options.httpStatus;
+    this.detalles = options.detalles;
+
+    // Preservar prototype chain
+    Object.setPrototypeOf(this, BolivarBusinessError.prototype);
+  }
+
+  get mensaje(): string {
+    return this.message;
+  }
+
+  set mensaje(value: string) {
+    // El mensaje se maneja via Error.message
+  }
+}

@@ -5,7 +5,16 @@ import logging
 from pathlib import Path
 
 from src.generators.java_spring_boot import JavaSpringBootGenerator
+from src.generators.node_express import NodeExpressGenerator
+from src.generators.python_fastapi import PythonFastApiGenerator
 from src.models.project_config import DomainModule, ProjectConfig
+
+# Mapeo de stack_id a clase generadora
+_GENERATORS = {
+    "java-spring-boot": JavaSpringBootGenerator,
+    "node-express": NodeExpressGenerator,
+    "python-fastapi": PythonFastApiGenerator,
+}
 
 logger = logging.getLogger("mcp_init_ms.tools.add_domain_module")
 
@@ -59,7 +68,14 @@ def handle_add_domain_module(project_path: str, module_dict: dict) -> dict:
         }
 
     try:
-        generator = JavaSpringBootGenerator(config, root)
+        stack = config.stack
+        generator_class = _GENERATORS.get(stack)
+        if not generator_class:
+            return {
+                "status": "error",
+                "message": f"Stack '{stack}' no soportado. Stacks disponibles: {', '.join(_GENERATORS.keys())}",
+            }
+        generator = generator_class(config, root)
         created_files = generator.generate_domain_module(new_module)
 
         # Actualizar project-config.json con el nuevo modulo

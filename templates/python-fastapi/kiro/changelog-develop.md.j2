@@ -1,0 +1,11 @@
+# Changelog — develop
+
+## [No publicado]
+
+### Agregado
+- Se inicializo el proyecto {{ project_name }} con arquetipo MCP_INIT_MS_SegurosBolivar
+- Se crearon modulos de dominio: {{ modules | map(attribute='entity_name') | join(', ') }}
+- Se configuro Docker Compose local (LocalStack{% if cache == "redis" %} + Redis{% endif %}{% if observability.datadog_enabled %} + Datadog Agent{% endif %})
+- Se configuro CI/CD con GitHub Actions
+- Se configuro FastAPI con OpenAPI docs en {{ context_path }}/docs
+- Se configuro pytest con cobertura minima 80%

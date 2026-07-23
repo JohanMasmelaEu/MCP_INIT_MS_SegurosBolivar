@@ -1,0 +1,112 @@
+# ============================================================
+# Docker Compose — {{ project_name }} (ambiente local)
+# ============================================================
+version: "3.9"
+
+services:
+  # --- LocalStack (AWS simulado) ---
+  localstack:
+    image: localstack/localstack:3.8
+    container_name: {{ project_name }}-localstack
+    ports:
+      - "{{ localstack_port }}:4566"
+    environment:
+      - SERVICES={{ localstack_services | join(',') }}
+      - DEFAULT_REGION=us-east-1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "./scripts/seed-localstack-ssm.sh:/etc/localstack/init/ready.d/seed.sh"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+{% if cache == "redis" %}
+  # --- Redis ---
+  redis:
+    image: redis:7-alpine
+    container_name: {{ project_name }}-redis
+    ports:
+      - "{{ redis_port }}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+{% endif %}
+{% if auth_strategy == "oauth2-resource-server" %}
+  # --- Mock OAuth Server ---
+  mock-oauth:
+    image: ghcr.io/navikt/mock-oauth2-server:2.1.5
+    container_name: {{ project_name }}-mock-oauth
+    ports:
+      - "8888:8888"
+    environment:
+      - JSON_CONFIG_PATH=/config/mock-oauth-config.json
+    volumes:
+      - "./config/mock-oauth-config.json:/config/mock-oauth-config.json:ro"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8888/.well-known/openid-configuration"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+{% endif %}
+{% if observability.datadog_enabled %}
+  # --- Datadog Agent (no-forward mode) ---
+  dd-agent:
+    image: gcr.io/datadoghq/agent:7
+    container_name: {{ project_name }}-dd-agent
+    environment:
+      - DD_API_KEY=dummy-key-for-local
+      - DD_APM_ENABLED=true
+      - DD_APM_NON_LOCAL_TRAFFIC=true
+      - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
+      - DD_LOG_LEVEL=WARN
+      - DD_DD_URL=http://localhost:1111
+      - DD_LOGS_ENABLED=false
+    ports:
+      - "8126:8126"
+      - "8125:8125/udp"
+
+{% endif %}
+  # --- App ({{ project_name }}) ---
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: {{ project_name }}-app
+    ports:
+      - "{{ app_port }}:{{ app_port }}"
+    env_file:
+      - .env
+    environment:
+      - APP_ENV=local
+      - APP_PORT={{ app_port }}
+      - DB_HOST=host.docker.internal
+      - AWS_ENDPOINT=http://localstack:4566
+{% if cache == "redis" %}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+{% endif %}
+{% if auth_strategy == "oauth2-resource-server" %}
+      - OAUTH_JWKS_URI=http://mock-oauth:8888/default/.well-known/jwks.json
+      - OAUTH_ISSUER=http://mock-oauth:8888/default
+{% endif %}
+{% if observability.datadog_enabled %}
+      - DD_AGENT_HOST=dd-agent
+      - DD_TRACE_AGENT_PORT=8126
+{% endif %}
+    depends_on:
+      localstack:
+        condition: service_healthy
+{% if cache == "redis" %}
+      redis:
+        condition: service_healthy
+{% endif %}
+{% if auth_strategy == "oauth2-resource-server" %}
+      mock-oauth:
+        condition: service_healthy
+{% endif %}

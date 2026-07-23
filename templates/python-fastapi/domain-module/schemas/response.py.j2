@@ -1,0 +1,35 @@
+"""Schema de respuesta para {{ m.entity_name }}."""
+
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict
+
+
+class {{ m.entity_name }}ResponseSchema(BaseModel):
+    """DTO de respuesta para {{ m.entity_name }}."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+{% if m.has_cod_field %}
+    cod_{{ m.module_name }}: str
+{% endif %}
+{% for field in m.fields %}
+{% if field.field_type.value == "String" %}
+    {{ field.name }}: str{% if field.nullable %} | None{% endif %}
+{% elif field.field_type.value == "Long" or field.field_type.value == "Integer" %}
+    {{ field.name }}: int{% if field.nullable %} | None{% endif %}
+{% elif field.field_type.value == "Boolean" %}
+    {{ field.name }}: bool{% if field.nullable %} | None{% endif %}
+{% elif field.field_type.value == "BigDecimal" %}
+    {{ field.name }}: float{% if field.nullable %} | None{% endif %}
+{% elif field.field_type.value == "LocalDate" or field.field_type.value == "LocalDateTime" %}
+    {{ field.name }}: str{% if field.nullable %} | None{% endif %}
+{% elif field.field_type.value == "UUID" %}
+    {{ field.name }}: str{% if field.nullable %} | None{% endif %}
+{% endif %}
+{% endfor %}
+    creado_por: str
+    fecha_creacion: datetime
+    modificado_por: str | None
+    fecha_modificacion: datetime | None

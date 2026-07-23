@@ -1,0 +1,20 @@
+import { z } from "zod";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "../../commons/pagination.dto.js";
+
+/**
+ * Schema Zod para filtros de busqueda de {{ m.entity_name }}.
+ * Incluye paginacion (page, size) y campos filtrables.
+ */
+export const filtros{{ m.entity_name }}Schema = z.object({
+  page: z.coerce.number().int().min(0).default(0),
+  size: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
+{% for field in m.fields %}
+{% if field.field_type.value == "String" %}
+  {{ field.name }}: z.string().trim().optional(),
+{% elif field.field_type.value == "Boolean" %}
+  {{ field.name }}: z.coerce.boolean().optional(),
+{% endif %}
+{% endfor %}
+});
+
+export type Filtros{{ m.entity_name }}Dto = z.infer<typeof filtros{{ m.entity_name }}Schema>;

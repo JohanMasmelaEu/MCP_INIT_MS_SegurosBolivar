@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+{%- for mcp in selected_mcps %}
+    "{{ mcp.id }}": {
+      "command": "docker",
+      "args": [
+{%- for arg in mcp.docker_args %}
+        "{{ arg }}"{{ "," if not loop.last }}
+{%- endfor %}
+      ],
+      "disabled": false
+    }{{ "," if not loop.last }}
+{%- endfor %}
+  }
+}

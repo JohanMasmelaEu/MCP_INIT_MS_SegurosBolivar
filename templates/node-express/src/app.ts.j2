@@ -1,0 +1,93 @@
+import express, { type Express } from "express";
+import helmet from "helmet";
+import cors from "cors";
+import hpp from "hpp";
+import rateLimit from "express-rate-limit";
+import swaggerUi from "swagger-ui-express";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+import { correlationIdMiddleware } from "./middleware/correlation-id.js";
+import { requestLoggerMiddleware } from "./middleware/request-logger.js";
+import { errorHandler } from "./middleware/error-handler.js";
+{% if auth_strategy == "oauth2-resource-server" %}
+import { authMiddleware } from "./middleware/auth.js";
+{% endif %}
+{% for module in modules %}
+import { {{ module.module_name }}Router } from "./{{ module.module_name }}/{{ module.module_name }}.controller.js";
+{% endfor %}
+
+/**
+ * Configura y retorna la aplicacion Express con todos los middlewares.
+ */
+export function createApp(): Express {
+  const app = express();
+
+  // --- Security middlewares ---
+  app.use(helmet());
+  app.use(hpp());
+  app.use(cors({
+    origin: process.env.CORS_ALLOWED_ORIGINS?.split(",") ?? ["http://localhost:3000"],
+    credentials: {{ cors_allow_credentials | lower }},
+  }));
+  app.use(rateLimit({
+    windowMs: 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+  }));
+
+  // --- Body parsing ---
+  app.use(express.json({ limit: "1mb" }));
+  app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+
+  // --- Observability middlewares ---
+  app.use(correlationIdMiddleware);
+  app.use(requestLoggerMiddleware);
+
+{% if auth_strategy == "oauth2-resource-server" %}
+  // --- Auth middleware (excepto rutas publicas) ---
+  const publicPaths = [
+    "{{ context_path }}/api/v1/health",
+    "{{ context_path }}/api-docs",
+{% for path in extra_public_paths %}
+    "{{ path }}",
+{% endfor %}
+  ];
+  app.use((req, res, next) => {
+    if (publicPaths.some((p) => req.path.startsWith(p))) {
+      return next();
+    }
+    return authMiddleware(req, res, next);
+  });
+{% endif %}
+
+  // --- Health check ---
+  app.get("{{ context_path }}/api/v1/health", (_req, res) => {
+    res.json({ status: "UP", timestamp: new Date().toISOString() });
+  });
+
+  // --- Swagger UI ---
+  try {
+    const specPath = resolve(process.cwd(), "api_spec.yaml");
+    const specContent = readFileSync(specPath, "utf-8");
+    app.use("{{ context_path }}/api-docs", swaggerUi.serve, swaggerUi.setup(undefined, {
+      swaggerOptions: { url: "{{ context_path }}/api-docs/spec.yaml" },
+    }));
+    app.get("{{ context_path }}/api-docs/spec.yaml", (_req, res) => {
+      res.type("text/yaml").send(specContent);
+    });
+  } catch {
+    // api_spec.yaml not found — skip swagger
+  }
+
+  // --- Domain routes ---
+{% for module in modules %}
+  app.use("{{ context_path }}/api/v1/{{ module.resource_path_resolved }}", {{ module.module_name }}Router);
+{% endfor %}
+
+  // --- Global error handler (must be last) ---
+  app.use(errorHandler);
+
+  return app;
+}
