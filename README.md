@@ -27,6 +27,7 @@ Crear (o editar) `~/.kiro/settings/mcp.json` (configuracion global) o `<tu-works
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
+        "--pull", "always",
         "-v", "C:/REPOS:/repos",
         "-v", "mcp-init-settings:/settings",
         "ghcr.io/johanmasmelaeu/mcp-init-ms-segurosbolivar:latest"
@@ -38,6 +39,8 @@ Crear (o editar) `~/.kiro/settings/mcp.json` (configuracion global) o `<tu-works
 ```
 
 **Importante:** Reemplaza `C:/REPOS` con la ruta de tu carpeta raiz de repositorios.
+
+> El flag `--pull always` garantiza que Docker descargue la ultima version de la imagen cada vez que Kiro inicie el MCP. Nunca ejecutaras una version desactualizada.
 
 | Volumen | Proposito | Tipo |
 |---------|-----------|------|
@@ -102,7 +105,7 @@ El MCP siempre trabaja con rutas `/repos/...` internamente. Kiro traduce automat
 │  Kiro IDE (tu maquina)                                          │
 │                                                                 │
 │  1. Lee .kiro/settings/mcp.json                                 │
-│  2. Ejecuta: docker run -i --rm -v C:/REPOS:/repos              │
+│  2. Ejecuta: docker run -i --rm --pull always -v C:/REPOS:/repos │
 │     -v mcp-init-settings:/settings <imagen>                     │
 │  3. Conecta al proceso via stdio (stdin/stdout)                 │
 │                                                                 │
@@ -218,6 +221,7 @@ Si el archivo existe en ambos niveles, la configuracion del workspace tiene prio
 | Archivos generados con permisos root | En Linux/Mac agregar `"--user", "$(id -u):$(id -g)"` a los args del JSON |
 | Network timeout en build local | Usar `docker build --network=host` para acceso a internet desde el contenedor |
 | "No se puede crear directorio" | El path debe estar dentro de `/repos` (el volumen montado) |
+| MCP ejecuta version vieja | Verificar que `--pull always` esta en los args del mcp.json |
 
 ---
 
@@ -256,6 +260,8 @@ docker build --network=host -t mcp-init-ms-segurosbolivar:latest .
 ```
 
 La unica diferencia es el nombre de imagen: `mcp-init-ms-segurosbolivar:latest` (local) vs `ghcr.io/johanmasmelaeu/mcp-init-ms-segurosbolivar:latest` (registry).
+
+> **Nota:** Para desarrollo local se omite `--pull always` porque la imagen ya esta construida localmente. Para produccion (imagen de registry) siempre incluir `--pull always`.
 
 ### Agregar un nuevo stack (futuro)
 

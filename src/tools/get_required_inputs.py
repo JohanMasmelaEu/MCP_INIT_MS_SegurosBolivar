@@ -359,6 +359,7 @@ def _mcp_marketplace_category() -> dict:
                         ],
                         "docker_args": [
                             "run", "-i", "--rm",
+                            "--pull", "always",
                             "-v", "C:/REPOS:/repos",
                             "-v", "mcp-init-settings:/settings",
                             "-p", "9752:9752",
@@ -384,6 +385,7 @@ def _mcp_marketplace_category() -> dict:
                         ],
                         "docker_args": [
                             "run", "-i", "--rm",
+                            "--pull", "always",
                             "-v", "mcp-hu-memory:/workspace",
                             "-p", "9751:9751",
                             "ghcr.io/johanmasmelaeu/mcp-hu-segurosbolivar:latest",
