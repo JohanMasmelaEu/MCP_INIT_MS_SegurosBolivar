@@ -28,7 +28,7 @@ Crear (o editar) `~/.kiro/settings/mcp.json` (configuracion global) o `<tu-works
       "args": [
         "run", "-i", "--rm",
         "--pull", "always",
-        "-v", "C:/REPOS:/repos",
+        "-v", "<TU_RUTA_LOCAL>:/repos",
         "-v", "mcp-init-settings:/settings",
         "ghcr.io/johanmasmelaeu/mcp-init-ms-segurosbolivar:latest"
       ],
@@ -38,14 +38,44 @@ Crear (o editar) `~/.kiro/settings/mcp.json` (configuracion global) o `<tu-works
 }
 ```
 
-**Importante:** Reemplaza `C:/REPOS` con la ruta de tu carpeta raiz de repositorios.
+### Configuracion del volumen (bind mount)
 
-> El flag `--pull always` garantiza que Docker descargue la ultima version de la imagen cada vez que Kiro inicie el MCP. Nunca ejecutaras una version desactualizada.
+El volumen `-v <TU_RUTA_LOCAL>:/repos` mapea una carpeta de tu maquina al path `/repos` dentro del contenedor. Los proyectos generados se escriben ahi.
 
-| Volumen | Proposito | Tipo |
-|---------|-----------|------|
-| `C:/REPOS:/repos` | Tu carpeta de repos mapeada dentro del contenedor. Los proyectos generados se escriben aqui. | Bind mount |
-| `mcp-init-settings:/settings` | Persiste la configuracion del MCP (directorio de salida) entre sesiones. | Volumen nombrado |
+**Reemplaza `<TU_RUTA_LOCAL>`** con la ruta absoluta de tu carpeta de repositorios. Ejemplos segun sistema operativo:
+
+| Sistema | Ejemplo | Resultado en mcp.json |
+|---------|---------|----------------------|
+| Windows | `C:\REPOS\SegurosBolivar` | `"-v", "C:/REPOS/SegurosBolivar:/repos"` |
+| Windows | `D:\Proyectos` | `"-v", "D:/Proyectos:/repos"` |
+| macOS/Linux | `/home/usuario/repos` | `"-v", "/home/usuario/repos:/repos"` |
+
+> **IMPORTANTE:** El path destino SIEMPRE debe ser `:/repos`. Nunca cambies esta parte.
+> El contenedor espera encontrar y escribir proyectos en `/repos`.
+> Si montas en otro path (como `:/` o `:/workspace`), el contenedor no funcionara.
+
+Ejemplo completo para un desarrollador cuya carpeta de trabajo es `C:\MisProyectos\Bolivar`:
+
+```json
+"-v", "C:/MisProyectos/Bolivar:/repos",
+```
+
+Esto hace que cuando el MCP genere un proyecto en `/repos/mi-microservicio`, los archivos aparezcan en `C:\MisProyectos\Bolivar\mi-microservicio` en tu maquina.
+
+### Resumen de volumenes
+
+| Volumen en mcp.json | Path dentro del contenedor | Tipo | Proposito |
+|---------------------|---------------------------|------|-----------|
+| `<TU_RUTA_LOCAL>:/repos` | `/repos` | Bind mount | Tu carpeta de repos local. Aqui se generan los proyectos. |
+| `mcp-init-settings:/settings` | `/settings` | Volumen nombrado | Persiste la configuracion del MCP (directorio de salida) entre sesiones. |
+
+### Flags adicionales
+
+| Flag | Proposito |
+|------|-----------|
+| `--pull always` | Garantiza que Docker descargue la ultima version de la imagen cada vez que Kiro inicie el MCP. Nunca ejecutaras una version desactualizada. |
+| `--rm` | Destruye el contenedor al cerrar sesion. La configuracion persiste en el volumen `mcp-init-settings`. |
+| `-i` | Modo interactivo (requerido para comunicacion stdio con Kiro). |
 
 > **Esta es la unica configuracion que necesitas hacer.** Una vez configurado, nunca mas se modifica.
 
@@ -86,13 +116,15 @@ Kiro pasara `target_path="/repos/OtroEquipo"` y el proyecto se creara ahi sin mo
 
 ### Mapeo de rutas (contenedor ↔ host)
 
-| Dentro del contenedor | En tu maquina (si montaste `C:/REPOS:/repos`) |
-|-----------------------|------------------------------------------------|
-| `/repos` | `C:\REPOS` |
-| `/repos/SegurosBolivar` | `C:\REPOS\SegurosBolivar` |
-| `/repos/SegurosBolivar/mi-ms` | `C:\REPOS\SegurosBolivar\mi-ms` |
+Ejemplo si montaste `C:/REPOS/SegurosBolivar:/repos`:
 
-El MCP siempre trabaja con rutas `/repos/...` internamente. Kiro traduce automaticamente en la conversacion.
+| Dentro del contenedor | En tu maquina |
+|-----------------------|---------------|
+| `/repos` | `C:\REPOS\SegurosBolivar` |
+| `/repos/mi-ms` | `C:\REPOS\SegurosBolivar\mi-ms` |
+| `/repos/otro-proyecto` | `C:\REPOS\SegurosBolivar\otro-proyecto` |
+
+El MCP siempre trabaja con rutas `/repos/...` internamente. Tu solo ves los archivos aparecer en tu carpeta local.
 
 ---
 
@@ -105,8 +137,8 @@ El MCP siempre trabaja con rutas `/repos/...` internamente. Kiro traduce automat
 │  Kiro IDE (tu maquina)                                          │
 │                                                                 │
 │  1. Lee .kiro/settings/mcp.json                                 │
-│  2. Ejecuta: docker run -i --rm --pull always -v C:/REPOS:/repos │
-│     -v mcp-init-settings:/settings <imagen>                     │
+│  2. Ejecuta: docker run -i --rm --pull always                   │
+│     -v <TU_RUTA>:/repos -v mcp-init-settings:/settings <imagen> │
 │  3. Conecta al proceso via stdio (stdin/stdout)                 │
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────────┐  │
@@ -119,7 +151,7 @@ El MCP siempre trabaja con rutas `/repos/...` internamente. Kiro traduce automat
 │  │  ├── Persiste config en /settings (volumen nombrado)      │  │
 │  │  └── Responde resultados via stdout                       │  │
 │  │                                                           │  │
-│  │  /repos ← bind mount desde C:/REPOS                       │  │
+│  │  /repos ← bind mount desde tu carpeta local               │  │
 │  │  /settings ← volumen nombrado (persiste entre sesiones)   │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                                                                 │
@@ -217,11 +249,12 @@ Si el archivo existe en ambos niveles, la configuracion del workspace tiene prio
 | "unauthorized" en pull de imagen | Verificar que el paquete ghcr.io esta marcado como **Public** en GitHub Package settings |
 | "image not found" | Verificar nombre exacto de la imagen en el JSON |
 | El MCP no responde | Reiniciar la sesion de Kiro (cierra y abre el chat) |
-| Proyecto no aparece en disco | Verificar que el bind mount (`C:/REPOS:/repos`) apunta a la carpeta correcta |
+| Proyecto no aparece en disco | Verificar que el bind mount (`<TU_RUTA>:/repos`) apunta a la carpeta correcta. El path destino SIEMPRE es `:/repos`. |
 | Archivos generados con permisos root | En Linux/Mac agregar `"--user", "$(id -u):$(id -g)"` a los args del JSON |
 | Network timeout en build local | Usar `docker build --network=host` para acceso a internet desde el contenedor |
-| "No se puede crear directorio" | El path debe estar dentro de `/repos` (el volumen montado) |
+| "No se puede crear directorio" | El path debe estar dentro de `/repos` (el volumen montado). Verifica que tu bind mount termina en `:/repos` |
 | MCP ejecuta version vieja | Verificar que `--pull always` esta en los args del mcp.json |
+| Contenedor no arranca / no hay logs | Verificar que el bind mount termina en `:/repos` y NO en `:/` ni `:/workspace`. Montar en `/` destruye el filesystem del contenedor y lo mata inmediatamente. |
 
 ---
 
@@ -249,7 +282,7 @@ docker build --network=host -t mcp-init-ms-segurosbolivar:latest .
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "-v", "C:/REPOS:/repos",
+        "-v", "<TU_RUTA_LOCAL>:/repos",
         "-v", "mcp-init-settings:/settings",
         "mcp-init-ms-segurosbolivar:latest"
       ],
@@ -344,8 +377,10 @@ MCP_INIT_MS_SegurosBolivar/
 
 | Volumen | Path interno | Tipo | Proposito |
 |---------|--------------|------|-----------|
-| `C:/REPOS:/repos` | `/repos` | Bind mount | Carpeta de repos del host. Aqui se generan los proyectos. |
+| `<TU_RUTA_LOCAL>:/repos` | `/repos` | Bind mount | Carpeta de repos del host. Aqui se generan los proyectos. |
 | `mcp-init-settings:/settings` | `/settings` | Nombrado | Persiste configuracion del MCP (output directory). Sobrevive al `--rm`. |
+
+> **NUNCA** montes el bind mount en `:/` ni en otro path que no sea `:/repos`. El contenedor depende de este path para funcionar correctamente.
 
 El contenedor se ejecuta con `--rm` (se destruye al cerrar sesion), pero el volumen nombrado `mcp-init-settings` mantiene la configuracion entre ejecuciones.
 
