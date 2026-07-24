@@ -17,18 +17,21 @@ Sencillo, ordenado, y preparado para crecer sin reescribir.
 - Es: cada funcionalidad de negocio vive junta y separada de las demás
 
 ```
-{{ base_package | replace('.', '/') }}/
-├── Application.java
-├── config/              ← configuración general del MS
+src/
+├── main.py              ← App factory con lifespan y routers
+├── config/              ← configuración general del MS (settings, DB, logging, security)
 ├── commons/             ← objetos compartidos entre dominios (si aplica)
-├── errorhandling/       ← manejo global de excepciones
+├── middleware/          ← middlewares transversales (correlation-id, error-handler, security-headers)
+├── errors/              ← manejo global de excepciones
 ├── utils/               ← utilidades transversales
 {% for module in modules %}
 └── {{ module.module_name }}/
-    ├── controller/
-    ├── dto/
-    ├── services/        (interface + impl)
-    └── repository/
+    ├── router.py
+    ├── service.py
+    ├── repository.py
+    ├── models.py        (SQLAlchemy model)
+    ├── schemas/         (Pydantic v2 request/response)
+    └── tests/
 {% endfor %}
 ```
 
@@ -36,10 +39,12 @@ Agregar un nuevo dominio:
 
 ```
 └── <nuevo-dominio>/     ← se agrega sin tocar los existentes
-    ├── controller/
-    ├── dto/
-    ├── services/
-    └── repository/
+    ├── router.py
+    ├── service.py
+    ├── repository.py
+    ├── models.py
+    ├── schemas/
+    └── tests/
 ```
 
 ## Reglas de estructura

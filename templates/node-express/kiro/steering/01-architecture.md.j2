@@ -17,18 +17,22 @@ Sencillo, ordenado, y preparado para crecer sin reescribir.
 - Es: cada funcionalidad de negocio vive junta y separada de las demás
 
 ```
-{{ base_package | replace('.', '/') }}/
-├── Application.java
-├── config/              ← configuración general del MS
+src/
+├── app.ts               ← Express app config con middlewares
+├── server.ts            ← Entry point: listen + graceful shutdown
+├── config/              ← configuración general del MS (env, DB, logger, security)
 ├── commons/             ← objetos compartidos entre dominios (si aplica)
-├── errorhandling/       ← manejo global de excepciones
+├── middleware/          ← middlewares transversales (auth, correlation-id, error-handler)
+├── errors/              ← manejo global de excepciones
 ├── utils/               ← utilidades transversales
 {% for module in modules %}
 └── {{ module.module_name }}/
-    ├── controller/
+    ├── {{ module.module_name }}.controller.ts
+    ├── {{ module.module_name }}.service.ts
+    ├── {{ module.module_name }}.repository.ts
+    ├── {{ module.module_name }}.schema.ts   (Drizzle table definition)
     ├── dto/
-    ├── services/        (interface + impl)
-    └── repository/
+    └── tests/
 {% endfor %}
 ```
 
@@ -36,10 +40,12 @@ Agregar un nuevo dominio:
 
 ```
 └── <nuevo-dominio>/     ← se agrega sin tocar los existentes
-    ├── controller/
+    ├── <dominio>.controller.ts
+    ├── <dominio>.service.ts
+    ├── <dominio>.repository.ts
+    ├── <dominio>.schema.ts
     ├── dto/
-    ├── services/
-    └── repository/
+    └── tests/
 ```
 
 ## Reglas de estructura

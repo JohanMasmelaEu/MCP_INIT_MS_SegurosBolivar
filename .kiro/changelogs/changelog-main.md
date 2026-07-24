@@ -100,3 +100,8 @@
 - Se corrigió error de validación en `get_project_plan` e `initialize_project` cuando el LLM pasa `config` como JSON string en vez de objeto — type hint cambiado de `dict` a `str | dict` en `server.py`
 - Se corrigió schema de `selected_mcps` en `get_required_inputs.py` — se agregó `item_schema` y `example` explícitos para que el LLM pase objetos `{"id": "..."}` en vez de strings planos
 - Se agregó normalización defensiva de `selected_mcps` en `_flatten_categorized_config` — convierte strings a objetos `{"id": string}` automáticamente para ambos paths (plano y categorizado)
+
+### Corregido
+- Se corrigió template `templates/node-express/kiro/steering/01-architecture.md.j2` — referenciaba variable Java `base_package` inexistente en contexto Node, causando error `'base_package' is undefined` al generar proyectos Node/Express
+- Se corrigió template `templates/python-fastapi/kiro/steering/01-architecture.md.j2` — mismo bug de `base_package` para stack Python/FastAPI
+- Se adaptó la estructura de directorios en ambos templates para reflejar la organización real de cada stack (Node: archivos `.ts` por dominio; Python: módulos con `router.py`, `service.py`, `models.py`)
