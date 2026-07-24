@@ -95,3 +95,8 @@
   - Sección "Implementation Tracker" agregada al steering `05-responsible-ai-use.md.j2` (reglas de tracking)
   - Hook `implementation-tracker.json.j2` (PostToolUse, registra progreso silenciosamente)
   - Hook `summary-on-completion.json.j2` actualizado para reportar estado del plan activo al finalizar sesión
+
+### Corregido
+- Se corrigió error de validación en `get_project_plan` e `initialize_project` cuando el LLM pasa `config` como JSON string en vez de objeto — type hint cambiado de `dict` a `str | dict` en `server.py`
+- Se corrigió schema de `selected_mcps` en `get_required_inputs.py` — se agregó `item_schema` y `example` explícitos para que el LLM pase objetos `{"id": "..."}` en vez de strings planos
+- Se agregó normalización defensiva de `selected_mcps` en `_flatten_categorized_config` — convierte strings a objetos `{"id": string}` automáticamente para ambos paths (plano y categorizado)

@@ -441,7 +441,15 @@ def _mcp_marketplace_category() -> dict:
                 "label": "MCP Servers a incluir",
                 "type": "array",
                 "required": False,
-                "description": "Lista de IDs de MCPs seleccionados del catalogo. Si no se indica, se incluye MCP_INIT por defecto.",
+                "description": "Lista de MCP Servers seleccionados. Cada item es un objeto con 'id' (obligatorio) y 'docker_args' (opcional).",
+                "item_schema": {
+                    "id": "string (ID del MCP del catalogo, ej: MCP_INIT_MS_SegurosBolivar)",
+                    "docker_args": "array of strings (opcional, override de Docker args)",
+                },
+                "example": [
+                    {"id": "MCP_INIT_MS_SegurosBolivar"},
+                    {"id": "MCP_HU_SegurosBolivar"},
+                ],
                 "catalog": [
                     {
                         "id": "MCP_INIT_MS_SegurosBolivar",
